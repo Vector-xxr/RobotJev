@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PlayJev</title>
+<meta name="description" content="An open 0.8B model plays ten browser games from raw pixels: one forward pass per move, a probability over the moves, no text.">
+<meta property="og:title" content="PlayJev">
+<meta property="og:description" content="An open 0.8B model plays ten browser games from raw pixels: one forward pass per move, a probability over the moves, no text.">
+<meta property="og:type" content="website">
+<link rel="stylesheet" href="demo.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap bar">
+    <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"></span>PlayJev</a>
+    <nav>
+      <a href="#gallery" data-i18n="nav.gallery">Gallery</a>
+      <a href="#results" data-i18n="nav.results">Results</a>
+      <a href="#help" data-i18n="nav.confidence">Confidence</a>
+      <a href="#how" data-i18n="nav.how">How it works</a>
+      <span class="navgap"></span>
+      <a class="icon" data-link="repo" href="https://github.com/OmniJev/PlayJev" title="GitHub" aria-label="GitHub">
+        <svg viewBox="0 0 16 16" width="17" height="17" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+      </a>
+      <button id="lang" type="button" title="切换到中文">中文</button>
+      <button id="theme" type="button" title="switch theme">dark</button>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <section class="lead wrap">
+    <h1 class="pagetitle" data-i18n-html="lead.h1">PlayJev: A Multimodal JEV-Like Model<br>for Small Games</h1>
+
+    <div class="hero-buttons">
+      <span class="btn btn-paper soon" data-soon="paper"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg> <span data-i18n="btn.paper">Paper</span><i class="tagx" data-i18n="link.soon">soon</i></span>
+      <a class="btn btn-code" data-link="repo" href="https://github.com/OmniJev/PlayJev"><svg viewBox="0 0 16 16" width="17" height="17" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg> <span data-i18n="btn.code">Code</span></a>
+      <a class="btn btn-model" data-link="hf" href="https://huggingface.co/OmniJev/PlayJev-0.8B"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/></svg> <span data-i18n="btn.model">Model</span></a>
+      <a class="btn btn-jev" data-link="openjev" href="https://github.com/OmniJev/openJev"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="8" rx="2"/><rect x="2" y="13" width="20" height="8" rx="2"/><path d="M6 7h.01M6 17h.01"/></svg> OpenJev</a>
+      <a class="btn btn-list" data-link="awesome" href="https://omnijev.github.io/awesome-jev/"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3 12 2"/></svg> Awesome-JEV</a>
+    </div>
+
+    <div class="lead-stage">
+      <div id="picker" class="tabs" role="tablist"></div>
+      <div id="stage" class="stage"></div>
+    </div>
+    <p id="notice" class="notice"></p>
+  </section>
+
+  <section class="wrap" id="gallery">
+    <h2 data-i18n="gallery.h2">Gallery</h2>
+    <p data-i18n="gallery.p">Ten games, one set of weights, ten different sets of moves to choose from.</p>
+
+    <div id="all" class="toolbar">
+      <span class="seg" role="group" aria-label="who plays">
+        <button type="button" data-who="model" class="on" data-i18n="who.model">the model</button
+        ><button type="button" data-who="s2" data-i18n="who.s2">with a teacher behind it</button
+        ><button type="button" data-who="random" data-i18n="who.random">random play</button>
+      </span>
+      <span class="seg" role="group" aria-label="how many games run">
+        <button type="button" data-mode="all" class="on" data-i18n="mode.all">ten at once</button
+        ><button type="button" data-mode="solo" data-i18n="mode.solo">one at a time</button>
+      </span>
+      <button id="all-pp" type="button" data-i18n="btn.pauseall">pause all</button>
+    </div>
+
+    <div id="grid" class="grid"></div>
+  </section>
+
+  <section class="wrap" id="results">
+    <h2 data-i18n="results.h2">Results</h2>
+    <p data-i18n="results.p">Sixteen held-out episodes per game, the same seeds for every player, the most probable move
+      taken with no sampling. The bar is where the model lands between random play and the scripted teacher that
+      labelled its training data.</p>
+    <div id="score-chart" class="chart"></div>
+    <details class="table-view">
+      <summary data-i18n="results.table">the same numbers as a table</summary>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th data-i18n="th.game">game</th><th class="num" data-i18n="th.random">random</th><th class="num" data-i18n="th.model">the model</th><th class="num" data-i18n="th.teacher">teacher</th><th class="num" data-i18n="th.vs">vs teacher</th></tr></thead>
+          <tbody id="results-body"></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <section class="wrap" id="calibration">
+    <h2 data-i18n="calib.h2">Does it know when it is right?</h2>
+    <p data-i18n="calib.p">Each dot takes the steps where the model gave its chosen move about the same probability, and
+      asks how often that move was the teacher's. On the diagonal, the number it reports is the rate it achieves.</p>
+    <div class="panels calib"></div>
+  </section>
+
+  <section class="wrap" id="help">
+    <h2 data-i18n="help.h2">Knowing when to ask for help</h2>
+    <div class="duel-block">
+      <p data-i18n="help.p">The model plays every step it is sure about and hands the rest to the teacher. Two boards of
+        the same game from the same seed: on the left the model plays alone, on the right it keeps the steps it is
+        confident about and the teacher takes the others, shown in coral.</p>
+      <div class="duel-row">
+        <div id="duel" class="duel"></div>
+      </div>
+    </div>
+
+    <div class="curves-block">
+      <h3 data-i18n="help.h3">What the confidence is worth</h3>
+      <p data-i18n="help.p2">The horizontal axis is the share of steps the teacher actually took, so the left end is the
+        model alone and the right end is the teacher alone. <b class="k-blue">Picking those steps by confidence</b> is
+        the line that has to beat <b class="k-coral">handing over the same share at random</b>, or the confidence means
+        nothing.</p>
+      <div class="panels curves"></div>
+    </div>
+  </section>
+
+  <section class="wrap" id="transfer">
+    <h2 data-i18n="transfer.h2">Learning a new game</h2>
+    <p data-i18n="transfer.p">Two games were held out of an eight-game model. Fine-tuning that model on a few thousand
+      frames of a held-out game is compared against fine-tuning the raw base model on the same frames. The line is how
+      often the fine-tuned model picks the teacher's move on 2000 frames of that game it never trained on.</p>
+    <div class="panels transfer"></div>
+    <details class="table-view">
+      <summary data-i18n="transfer.table">every run as a table, with the scores</summary>
+      <div class="tablewrap">
+        <table id="transfer-table">
+          <thead><tr><th data-i18n="th.game">game</th><th data-i18n="th.from">starts from</th><th class="num" data-i18n="th.frames">frames</th><th class="num" data-i18n="th.agree">agreement</th><th class="num" data-i18n="th.score">score</th><th class="num" data-i18n="th.vs">vs teacher</th></tr></thead>
+          <tbody id="transfer-body"></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <section class="wrap" id="how">
+    <h2 data-i18n="how.h2">How it works</h2>
+    <div class="how">
+      <div class="how-copy">
+        <p data-i18n-html="how.p1">The model sees the frame and the option list, rendered with the frozen OpenJev prompt,
+          and its answer is the next token after "Answer:". The probability over moves is the softmax over the option
+          letters at that position: one forward pass, no sampling, nothing generated.</p>
+        <p data-i18n="how.p2">The most probable move is played, with one exception: a move that leaves the picture
+          unchanged, such as a blocked direction in 2048 or Sokoban, is not repeated on that same picture, and the next
+          most probable move goes instead.</p>
+        <p data-i18n="how.p3">Each board here is the vendored game running with the shim and hook used in training, a
+          virtual clock, a seeded random source and synthetic key events, so the recorded action sequence reproduces the
+          episode step for step.</p>
+      </div>
+      <div class="how-prompt">
+        <div class="promptrow"><label for="prompt-game" data-i18n="how.optionlist">option list for</label><select id="prompt-game"></select></div>
+        <pre id="prompt"></pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap" id="credits">
+    <h2 data-i18n="credits.h2">The games</h2>
+    <p data-i18n="credits.p">Ten open-source browser games, vendored with their own licence and every change we made
+      recorded next to them. The art in Infinite Mario, Floppy Bird and the Racer belongs to its original owners, and
+      the licence below covers the code each author wrote.</p>
+    <div class="credit-grid">
+      <a href="https://github.com/jakesgordon/javascript-tetris"><b>Tetris</b> <em>jakesgordon/javascript-tetris</em> <i>MIT</i></a>
+      <a href="https://github.com/patorjk/JavaScript-Snake"><b>Snake</b> <em>patorjk/JavaScript-Snake</em> <i>MIT</i></a>
+      <a href="https://github.com/daleharvey/pacman"><b>Pacman</b> <em>daleharvey/pacman</em> <i>WTFPL</i></a>
+      <a href="https://github.com/jakesgordon/javascript-racer"><b>Javascript Racer</b> <em>jakesgordon/javascript-racer</em> <i>MIT</i></a>
+      <a href="https://github.com/StrykerKKD/SpaceInvaders"><b>Space Invaders</b> <em>StrykerKKD/SpaceInvaders</em> <i>MIT</i></a>
+      <a href="https://github.com/taniarascia/sokoban"><b>Sokoban</b> <em>taniarascia/sokoban</em> <i>MIT</i></a>
+      <a href="https://github.com/robertkleffner/mariohtml5"><b>Infinite Mario</b> <em>robertkleffner/mariohtml5</em> <i>Unlicense</i></a>
+      <a href="https://github.com/nebez/floppybird"><b>Floppy Bird</b> <em>nebez/floppybird</em> <i>Apache-2.0</i></a>
+      <a href="https://github.com/jakesgordon/javascript-breakout"><b>Breakout</b> <em>jakesgordon/javascript-breakout</em> <i>MIT</i></a>
+      <a href="https://github.com/gabrielecirulli/2048"><b>2048</b> <em>gabrielecirulli/2048</em> <i>MIT</i></a>
+    </div>
+  </section>
+
+</main>
+
+<footer class="wrap">
+  <span><a data-link="repo" href="https://github.com/OmniJev/PlayJev">PlayJev on GitHub</a> ·
+    <a data-link="openjev" href="https://github.com/OmniJev/openJev">OpenJev</a> ·
+    <a data-link="awesome" href="https://omnijev.github.io/awesome-jev/">Awesome-JEV</a></span>
+  <span id="generated"></span>
+</footer>
+
+<script src="i18n.js"></script>
+<script src="data.js"></script>
+<script src="demo.js"></script>
+</body>
+</html>

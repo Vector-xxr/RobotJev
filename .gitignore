@@ -72,3 +72,6 @@ wandb/
 /weights/
 /*.pt
 /mobileclip_blt.ts
+
+# PlayJev（10-15 并入）里游戏前端自带的 JS 库目录也叫 lib/，上游那条 lib/ 规则不能管到它
+!PlayJev/**/lib/

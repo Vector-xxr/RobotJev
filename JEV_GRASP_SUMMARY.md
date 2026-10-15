@@ -189,7 +189,7 @@
 ```bash
 # 终端 1：PlayJev 服务（一直开着）
 conda activate playjev
-cd ~/yuhang_workspace/算法/Jev/PlayJev
+cd ~/yuhang_workspace/算法/Jev/RoboJev/PlayJev
 PYTHONPATH= python -m playjev.serve --ckpt weights/PlayJev-0.8B --port 18732
 
 # 终端 2：抓取
