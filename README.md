@@ -128,7 +128,6 @@ PlayJev 自己的测试见 [PlayJev/SETUP_5070Ti.md](PlayJev/SETUP_5070Ti.md#测
 
 - **真机跑不了**、**别和 RobotDecision 抢相机**：见开头两条。
 - 抓取流程本身的问题（固定朝向够不着的区域、外参和末端耦合、走廊里的假障碍、力度类别分差小等）见 [SUMMARY 的已知问题](JEV_GRASP_SUMMARY.md#当前状态与已知问题10-15)。
-- `run_composite.py` 开头的模块文档（`--help` 打出来的那段）还是 9-28 早上的流程，比如示范单应性、夹持中心 [15,32,88]mm，以 SUMMARY 为准。
 - **本机请求别走代理**：`.bashrc` 设了 `http_proxy`，连 `127.0.0.1` 也会走代理；PlayJev 服务没起时，代理会回 502，把「连接被拒」遮住。`probe_playjev.ask` 已经绕开代理；自己用 `curl` 测本机服务时加 `--noproxy '*'`。
 - 机器重启后 PlayJev 服务不会自己起来。内核升级后 GPU 驱动可能掉；GPU 用不了时，可以临时用 `PlayJev/serve_cpu.py` 在 CPU 上起服务，很慢，只能应急，用法见 [PlayJev/SETUP_5070Ti.md](PlayJev/SETUP_5070Ti.md#跑)。
 

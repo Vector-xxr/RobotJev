@@ -1,21 +1,28 @@
 #!/usr/bin/env python3
-"""复合策略抓取：CV 模型 + 深度相机给数，PlayJev 选方向。**不含任何物体专属常数**，换物体只换指令。
+"""复合策略抓取：CV 模型 + 深度相机给数，PlayJev 选方向。**不含任何物体专属常数**，换物体只换指令（或 --click 点选）。
 
-    python -m robojev.run_composite --instruction "pick up the ping pong ball" --stage locate
-    python -m robojev.run_composite --instruction "pick up the ping pong ball" --stage pregrasp
+完整流程和每个数的来源见 JEV_GRASP_SUMMARY.md。**10-12 起末端换成灵巧手、两台相机都换了位置，
+9/30 的标定全部作废，真机暂时跑不了**，见 README.md。
+
     python -m robojev.run_composite --instruction "pick up the blue cylinder" --stage grasp
+    python -m robojev.run_composite --click --stage grasp        # 在 335 的一帧里用鼠标点要抓的物体
 
-  locate    俯视相机：指令 -> 物体短语 -> YOLO-World（只查指令派生的说法）-> CLIP（和背景 + COCO 80 类比）
-            -> 示范单应性粗定位 -> 自动挑最近的示范预抓取姿态。不动臂。
-  pregrasp  慢速移过去；用**整幅静态场景光流 + 深度**测相机运动映射 J；找目标并把它挪到画面中部。
-  grasp     腕部画面空间视觉伺服：目标 3D 中心来自 SAM 掩码 + 深度点云；夹持中心来自示范；
-            PlayJev 在 Snake 里选画面方向，沿光轴按深度差推进；到位合爪，按测得宽度判成败。
+--stage 停在哪一步（默认 --locate top335 时；三步都会连臂、动臂）：
+  locate    回 0 位 -> 335 定位（YOLO-World 只查指令派生的说法 -> CLIP 筛 -> MobileSAM + 深度）
+            -> 能不能抓（逆解、夹得下、走廊）-> 平移到预抓取点上方、竖直降到预抓取点，停。
+  pregrasp  再加腕部接手：现场测 J、认物体、和 335 交叉验证高度；CLIP 定力度和抓取位姿。不合爪。
+  grasp     再加 PlayJev 伺服（偏差画成贪吃蛇棋盘，选上下左右）-> 合爪 -> 抬 60mm -> 判成败。
+            腕部和 335 量的高度对不上（如透明物体）时，改走 335 直线接近。
+--locate 的 demo（示范单应性）、top（旧 UGREEN 俯视，相机已拆）、wrist 是早期的定位方式。
 
 所有数的来源：
-  目标中心/尺寸     MobileSAM 掩码 -> 去畸变（相机自报 8 个畸变系数）-> 深度（0.1mm/单位，相机自报）-> 点云
-  夹持中心          示范：成功抓球的片段里合爪前 0.3s 球的位置（夹爪属性，与物体无关）[15,32,88]mm
-  相机运动映射 J    现场点动 ±1cm，几百个静态特征点的 3D 位移中位数；再投影到最近的正交矩阵（刚体约束）
-  合爪应有读数      1 - 宽度/98mm（全开 98mm，TG9801 手册）；实测约 50mm 的套筒读 0.50，公式给 0.49
+  目标中心/尺寸     MobileSAM 掩码 + 深度 -> 点云（腕部 305 先去畸变）；335 连看 5 帧取中位
+  335 -> 臂         calibrate_top335 的外参（calibration/top335_extrinsic.json），只在固定抓取朝向下成立
+  夹持中心 G        calibrate_gripper --centre 标的（calibration/gripper.json）；没标过才用示范测的旧值 [15,32,88]mm
+  相机运动映射 J    现场点动 ±1cm，静态场景光流 + 深度，投影到最近的正交矩阵；测不出时用 calibration/wrist_J.json
+  离支撑面下限      指尖在 G 下方多深 + 2mm（9/30 长手指是 26mm）；--finger-floor 只这一次覆盖
+  力度              CLIP 判易碎 / 软 / 硬 -> 查表；--force 只这一次覆盖
+  合爪应有读数      1 - 宽度/满开（满开 98mm，TG9801 手册；calibrate_gripper 量过就用量的）
 """
 
 from __future__ import annotations
