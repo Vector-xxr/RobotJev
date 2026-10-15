@@ -6,8 +6,8 @@
 ## 环境
 
 ```bash
-conda activate laya            # /home/crp-5070ti-01/miniforge3/envs/laya
-python run_inference_demo.py
+cd ~/yuhang_workspace/算法/Jev/RobotJev
+PYTHONPATH= ~/miniforge3/envs/laya/bin/python run_inference_demo.py
 ```
 
 | 组件 | 版本 |
@@ -18,7 +18,18 @@ python run_inference_demo.py
 | huggingface_hub | 1.32.0 |
 | laya | 0.3.7（`pip install -e ".[serve]"`） |
 
-重建步骤：
+robojev 和 RobotDecision 也跑在这个环境里，另外装了：
+
+| 包 | 版本 | 谁用 |
+|---|---|---|
+| ultralytics | 8.4.160 | robojev：YOLO-World、MobileSAM |
+| clip | 1.0（从 `https://github.com/ultralytics/CLIP.git` 装的） | robojev：CLIP ViT-B/32 |
+| opencv-python | 5.0.0.93（带 `CAP_OBSENSOR`） | robojev 的相机走 OBSENSOR 要它 |
+| pyserial | 3.5 | `atom_robot` 的夹爪、灵巧手串口 |
+| openai | 3.29.0 | RobotDecision 调模型 |
+| pymodbus | 2.5.3 | RobotDecision 经 `数据_硬件/灵巧手遥操/VR设备/inspire_hand6.py` 用网口控制灵巧手 |
+
+重建步骤（在 RobotJev 根目录下）：
 
 ```bash
 conda create -n laya python=3.11 -y
@@ -26,6 +37,8 @@ conda activate laya
 pip install torch                      # PyPI 默认轮子就是 cu130，arch_list 含 sm_120
 pip install -e ".[serve]"
 pip install socksio                    # 见下面「两个本机坑」
+# robojev、RobotDecision 用的，版本见上表（这一行是按现有环境反推的，没有从零重建验证过）
+pip install ultralytics==8.4.160 git+https://github.com/ultralytics/CLIP.git opencv-python==5.0.0.93 pyserial==3.5 openai==3.29.0 pymodbus==2.5.3
 ```
 
 ## 两个本机坑
@@ -41,7 +54,7 @@ pip install socksio                    # 见下面「两个本机坑」
 
 ## 权重
 
-首次运行从 HF 下载，缓存在 `~/.cache/huggingface`。三个 checkpoint：
+三个 checkpoint 已经放在项目的 `weights/laya/` 里（不进 git）。`run_inference_demo.py` 和 robojev 的 `policy.py`（`laya_model()`）都先读它，没有才从 HF 下载、缓存在 `~/.cache/huggingface`。`laya-serve` 例外，见下面「Jev 兼容 HTTP 接口」。
 
 | 名字 | repo | 用途 |
 |---|---|---|
@@ -59,25 +72,30 @@ pip install socksio                    # 见下面「两个本机坑」
 | Router 英文 | 约 445 ms 首次 → 之后同上 |
 | Router 中文/印地语 | 55～76 ms（含切 checkpoint） |
 
-README 给的 T4 数字是 32.8 ms，5070Ti 上快 3 倍。
+[README_laya.md](README_laya.md) 给的 T4 数字是 32.8 ms，5070Ti 上快 3 倍。
 
 ## 仓库测试
 
 CI 是把每个 test 当脚本跑，不是 pytest（好几个文件在模块级 `sys.exit`，pytest 收集会 INTERNALERROR）：
 
 ```bash
-PYTHONPATH= python tests/test_router.py     # 17 个文件全过
+cd ~/yuhang_workspace/算法/Jev/RobotJev
+for t in tests/test_*.py; do PYTHONPATH= ~/miniforge3/envs/laya/bin/python $t; done
 ```
+
+18 个文件，17 个过。`test_local_e2e.py` 要先把三个模型手动导出到 `~/laya_models`（`laya/`、`laya-multilingual/`、`laya-typed-decisions/`），没有就报 `Local model path not found`，不算失败。robojev 自己的离线测试见 [README](README.md#离线测试)。
 
 ## Jev 兼容 HTTP 接口
 
 ```bash
-PYTHONPATH= LAYA_MODELS=english LAYA_PORT=8077 LAYA_HOST=127.0.0.1 laya-serve
+PYTHONPATH= LAYA_MODELS=english LAYA_PORT=8077 LAYA_HOST=127.0.0.1 ~/miniforge3/envs/laya/bin/laya-serve
 curl --noproxy '*' http://127.0.0.1:8077/v1/systemone -H 'Content-Type: application/json' -d '{...}'
 ```
 
 `curl` 必须带 `--noproxy '*'`，否则 127.0.0.1 也会被 http_proxy 劫持。
 返回体带 `answers` / `usage` / `routing`，字段与 TypeSafe 的 System One API 对齐。
+
+`laya-serve` **不读项目里的 `weights/laya/`**：它按 HF 的模型名加载（`laya/serve.py` 的 `build_router`）。断网时要求 `~/.cache/huggingface` 里已经有缓存。
 
 ## 已知毛刺（上游的，不是装坏了）
 

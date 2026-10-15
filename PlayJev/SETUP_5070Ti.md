@@ -6,9 +6,10 @@
 
 ## 环境
 
+conda 环境 `playjev`（`~/miniforge3/envs/playjev`）。下面的命令都在 `PlayJev/` 目录下跑：
+
 ```bash
-conda activate playjev        # /home/crp-5070ti-01/miniforge3/envs/playjev
-cd 算法/Jev/RobotJev/PlayJev
+cd ~/yuhang_workspace/算法/Jev/RobotJev/PlayJev
 ```
 
 | 组件 | 版本 |
@@ -49,15 +50,20 @@ pip 直接 `ResolutionImpossible`。3.7.1 在 PyPI 上确实存在，所以不�
 
 ```bash
 # 1) 直接玩一局
-python -m playjev.play snake --policy local --ckpt weights/PlayJev-0.8B --episodes 1
+PYTHONPATH= ~/miniforge3/envs/playjev/bin/python -m playjev.play snake --policy local --ckpt weights/PlayJev-0.8B --episodes 1
 
-# 2) 起决策服务（OpenJev 的 /v1/systemone 请求形状，只是 state 里放帧）
-python -m playjev.serve --ckpt weights/PlayJev-0.8B --port 18732
+# 2) 起决策服务（OpenJev 的 /v1/systemone 请求形状，只是 state 里放帧）。RobotJev 抓取要它一直开着
+PYTHONPATH= ~/miniforge3/envs/playjev/bin/python -m playjev.serve --ckpt weights/PlayJev-0.8B --port 18732
+
+# 2') GPU 用不了时（比如内核升级后驱动掉了），在 CPU 上起同一个服务，参数相同；很慢，只能应急
+PYTHONPATH= ~/miniforge3/envs/playjev/bin/python serve_cpu.py --ckpt weights/PlayJev-0.8B --port 18732
 
 # 3) demo 页，把每个格子切到本地服务
-cd demo && python -m http.server 18080 --bind 127.0.0.1
+cd demo && PYTHONPATH= ~/miniforge3/envs/playjev/bin/python -m http.server 18080 --bind 127.0.0.1
 # 浏览器开 http://127.0.0.1:18080/index.html?server=http://127.0.0.1:18732
 ```
+
+`serve_cpu.py` 是本机加的，不是上游的：装着 `fla`（flash-linear-attention，Triton 内核只能跑在 GPU 上）时，直接 `playjev.serve --device cpu` 每个请求都会 500。它在进程里把 `fla` 挡掉、自动补上 `--device cpu`，让 transformers 走纯 PyTorch。不用卸 `fla`，GPU 好了照常用 `playjev.serve`。
 
 请求形状（`playjev/serve.py`）：
 
@@ -92,9 +98,22 @@ cd demo && python -m http.server 18080 --bind 127.0.0.1
 CORS 已验证：serve 返回 `Access-Control-Allow-Origin: *`，:18080 的 demo 跨源调 :18732 不会被挡。
 `curl` 打本机服务记得 `--noproxy '*'`，否则被 http_proxy 劫持。
 
+## 测试
+
+不用 GPU、不用模型，只要 chromium（`playwright install chromium`）。每个游戏一个确定性检查：同一个种子、同一串动作，两个页面的分数和状态每一步都要一样。
+
+```bash
+for g in games/*/check_det.py; do PYTHONPATH= ~/miniforge3/envs/playjev/bin/python $g; done
+```
+
+正常结果：9 个游戏最后一行都报确定，字样各不相同（`DETERMINISM: PASS`、`determinism OK`、`deterministic: 4 seeds ...`）。snake 没有这个脚本。
+
 ## 和 RobotJev / Laya 什么关系
 
 同一个 System One 形状（state + typed questions → 带概率的 typed answers），
-但**输入是像素不是文本**。RobotJev 那条链现在是靠 YOLO 把图像压成一句话再喂给纯文本的
-Laya；PlayJev 这种形态是直接从像素出动作分布，正好是那条链绕开的东西。
-两者的 `/v1/systemone` 请求形状是兼容的，只是 state 一个放 `frames` 一个放 `body`。
+但**输入是像素不是文本**。两者的 `/v1/systemone` 请求形状是兼容的，只是 state 一个放 `frames` 一个放 `body`。
+
+PlayJev 零样本看真实相机画面不行（左右镜像后概率不跟着换，遮掉目标反而更自信）。所以 RobotJev 不给它照片，
+而是把「目标相对夹爪的偏差」画成一帧它训练时见过的贪吃蛇画面（`robojev/snake_render.py`），
+经这个服务问它选上下左右（`robojev/probe_playjev.py` 的 `ask`）。抓取流程 `run_composite` 的腕部伺服就是这么用它的，
+详见 [JEV_GRASP_SUMMARY.md](../JEV_GRASP_SUMMARY.md)。Laya 不在抓取回路里，原因见 [RobotJev 的 README](../README.md#laya-在机器人上的边界)。

@@ -6,7 +6,7 @@
 #   bash robojev/grasp_sequence.sh                                   # 默认：乒乓球 -> 水瓶 -> 蓝色圆柱
 #   bash robojev/grasp_sequence.sh "pick up the X" "pick up the Y"   # 自己给顺序
 #
-# 前提：臂已上电；PlayJev 服务开着（见 COMPOSITE_PIPELINE.md）。
+# 前提：臂已上电；PlayJev 服务开着（见 JEV_GRASP_SUMMARY.md 的「命令」）。
 # 结果：logs/seq_<时间>/ 下每个任务一份日志 + 录像，summary.txt 是汇总表。
 # 设备被别的进程占着（比如 collect）就停下，不杀进程。
 

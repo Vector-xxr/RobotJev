@@ -1,693 +1,180 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NandhaKishorM/laya/main/assets/logo-lockup-dark.png" />
-    <img src="https://raw.githubusercontent.com/NandhaKishorM/laya/main/assets/logo-lockup.png" alt="Laya" width="330" />
-  </picture>
-</p>
+# RobotJev
 
-**Multilingual, non-autoregressive System 1 decision engine.** Typed decisions over 100+ languages in a single forward pass — 33 ms — trained with reinforcement learning against strictly proper scoring rules (RLCD), with a router that picks the right checkpoint per request.
+在 Laya 和 PlayJev 两个开源决策模型上做 AR5 的「万物可抓」。位置、高度、宽度、力度全部由俯视 Gemini 335、腕部 Gemini 305 的深度，加上 YOLO-World、CLIP、MobileSAM 现场量出来；PlayJev 只在腕部伺服时选上下左右。抓取流程的完整说明见 [JEV_GRASP_SUMMARY.md](JEV_GRASP_SUMMARY.md)。
 
-<div align="center">
+> [!WARNING]
+> **按现在的硬件，真机流程跑不了。** 9/30 的标定全部作废：
+> - 末端从 TG9801 夹爪换成了因时灵巧手（10-12），而 robojev 的满开宽度、力度档位、手指扫掠盒、`gripper.json` 都是按夹爪定的；
+> - 腕部 305 换了装法（10-12 重新装到手上），`wrist_J.json` 和夹持中心作废；
+> - 俯视 335 换了机位（10-13 改成正上方俯视），`top335_extrinsic.json` 作废。
+>
+> 10-12 以后，决策方向改在 [`../RobotDecision`](../RobotDecision) 里做。
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/15d4Yv__KHeHjshVb-6PRTfqVllxih2S3?usp=sharing)
-[![PyPI version](https://img.shields.io/pypi/v/laya.svg)](https://pypi.org/project/laya/)
-[![Hugging Face Model](https://img.shields.io/badge/%F0%9F%A4%97%20Model-convaiinnovations%2Flaya-blue)](https://huggingface.co/convaiinnovations/laya)
-[![Multilingual](https://img.shields.io/badge/%F0%9F%A4%97%20Model-laya--multilingual-blue)](https://huggingface.co/convaiinnovations/laya-multilingual)
-[![Hugging Face Space](https://img.shields.io/badge/%F0%9F%A4%97%20Space-laya--demo-orange)](https://huggingface.co/spaces/convaiinnovations/laya-demo)
-[![Dev.to Article](https://img.shields.io/badge/dev.to-Read%20Article-0A0A0A?logo=devdotto&logoColor=white)](https://dev.to/nandakishor_m_6cc0adfde9f/i-built-non-autoregressive-decision-models-a-year-ago-then-a-frontier-lab-called-it-a-18me)
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-nandakishorm-FFDD00?logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/nandakishorm)
-[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Hosted API](https://img.shields.io/badge/Hosted%20API-impossibl-111111)](https://impossibl.com/convaiinnovations/laya)
+> [!CAUTION]
+> **RobotDecision 在用相机时，不要启动 robojev 的任何程序。** robojev 自带的相机代码（`robojev/camera.py`）打开 Orbbec 前会先复位它的 USB，然后只走 OBSENSOR。腕部 305 走 OBSENSOR 一帧不出，还会把 V4L2 也弄得不出帧，只能物理拔插救回来。RobotDecision 用 `v4l2:` 前缀走 V4L2，见 [工作区说明](../../../工作区说明.md) 第 3 节。
 
-</div>
+## 三部分的关系
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/NandhaKishorM/laya/main/assets/laya_vs_jev_full.png" alt="Laya versus TypeSafe Jev: accuracy on shared public datasets, every application workflow, all 51 languages, speed, calibration, and the cost of not preloading" width="100%" />
-</p>
+| 目录 | 是什么 | 怎么用 |
+|---|---|---|
+| `laya/` 等根目录上游文件 | 上游 Laya（文本决策模型），说明见 [README_laya.md](README_laya.md) | 以 editable 方式装进 `laya` 环境。robojev 只有旧实验用它（`policy.py`，经 `bench_policy`、`run_loop`），抓取流程不用 |
+| `PlayJev/` | 上游 PlayJev（吃一帧画面、出动作分布），说明见 [PlayJev/README.md](PlayJev/README.md) | 在 `playjev` 环境里起服务，监听 `127.0.0.1:18732`；robojev 通过 `probe_playjev.ask` 调用 |
+| `robojev/`、`robojev_agent.py` | 自己的抓取流程和网页代理 | 跑在 `laya` 环境，经 `数据_硬件/SO101/atom_robot` 驱动 AR5 和夹爪 |
 
-Laya evaluates typed questions (`choice`, `score`, `noul`) over any state (text, email, ticket or JSON document) in **a single forward pass** — 33 ms for one question, 7.2 ms/question batched, measured on a T4. No text generation, so nothing to parse and nothing to hallucinate.
+上游代码从哪来、改过什么，见 [上游来源.md](上游来源.md) 和 [PlayJev/上游来源.md](PlayJev/上游来源.md)。
 
-Three checkpoints, and a `Router` that picks between them per request:
+## 时间线
 
-| | encoder | params | context | use it for |
-|---|---|---|---|---|
-| [`laya`](https://huggingface.co/convaiinnovations/laya) | ModernBERT-large | 421M | 512 | English |
-| [`laya-multilingual`](https://huggingface.co/convaiinnovations/laya-multilingual) | mmBERT-base | 322M | 1024 | 100+ languages, 2x faster |
-| [`laya-typed-decisions`](https://huggingface.co/convaiinnovations/laya-typed-decisions) | ModernBERT-large | 421M | 1024 | the typed-decisions workflows |
-
-### What's new in 0.3.7
-
-* **About 10x faster loading.** Checkpoints are built without the throwaway random weight initialisation, so `laya.load()` drops from about 22 s to about 2 s on CPU with bit-identical answers. This also skips the pass that crashed on Windows with Python 3.14 (#123).
-* **Better routing for non-English Latin text.** Plain-ASCII Spanish, Italian, Portuguese and French (accents stripped by mail clients and ticket systems) and Brazilian Portuguese support text now reach the multilingual checkpoint. Letters in scripts the router has no range for no longer fall through to English, and URLs, e-mail addresses and dotted names no longer count as words. Checked on 20,000 English texts, with no English prose moved.
-* **A Jev-compatible HTTP server.** `pip install "laya[serve]"`, then `laya-serve`, speaks `POST /v1/systemone`, so existing TypeSafe clients work by changing `baseUrl`. See [Self-Hosting](#self-hosting-http-server-jev-compatible).
-* **Router defaults and hooks.** `Router()` keeps two checkpoints resident, so alternating languages no longer reload a model on every request. You can pass your own language guess with `lang_guess=` and send undecided text to `Router(default=...)`. `Router` and `Agent` also work as context managers, and evicted models free their memory.
-* **Clearer errors and safer edge cases.** A malformed question is rejected with a message naming the question and what to fix. An empty question set returns an empty answer, and invalid temperatures in a checkpoint no longer stop it loading.
-* **E-mail cleaning for Portuguese and Spanish** replies, signatures and footers.
-* **Fine-tuning notebook fixes.** Calibration is now fitted on a held-out slice rather than on training data (#186), and stale temperature overrides are cleared before a refit.
-* **Docker quickstart** under `docs/docker.md`.
-
----
-
-## Installation
-
-Python 3.10 or newer. The dependencies set that floor: `huggingface_hub` 1.x, `transformers` 5.x and `torch` 2.14 all require 3.10.
-
-**Optional PyTorch build selection:** If you need a CPU-only or GPU-specific PyTorch build, follow [PyTorch's installation guide](https://pytorch.org/get-started/locally/) after creating your virtual environment and before installing Laya. Replace `pip` or `pip3` in the selected command with the environment's Python executable followed by `-m pip`.
-
-If you already use a virtual environment, install the PyPI release with:
-
-```bash
-python -m pip install laya
-```
-
-For a new environment, choose the commands for your platform below. Run them from your project directory; the explicit Python paths keep installation and verification in the same environment.
-
-**macOS / Linux** (with Python 3.10 or newer):
-
-On Debian/Ubuntu, the system Python may require `sudo apt install python3-venv` before creating a virtual environment. If `venv` reports that `ensurepip` is unavailable, install that package and retry.
-
-```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install laya
-.venv/bin/python -I -c "import laya; print(laya.__version__)"
-```
-
-**Windows PowerShell** (this example uses an installed Python 3.11):
-
-```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install laya
-.\.venv\Scripts\python.exe -I -c "import laya; print(laya.__version__)"
-```
-
-Both checks print the installed Laya version without loading a checkpoint. `-I` excludes the current directory from the import search path, so a local source copy cannot mask a missing installation. Keep using the same virtual environment's Python when running your application.
-
-**Install from GitHub**
-
-To use the development version instead of the PyPI release, create the virtual environment above and replace its installation command with the appropriate command below. Git must be installed.
-
-```bash
-# macOS / Linux
-.venv/bin/python -m pip install "git+https://github.com/NandhaKishorM/laya.git"
-```
-
-```powershell
-# Windows PowerShell
-.\.venv\Scripts\python.exe -m pip install "git+https://github.com/NandhaKishorM/laya.git"
-```
-
-Run the same version check afterward. The GitHub version follows the repository's default branch and may differ from the published release.
-
-**Model setup and troubleshooting**
-
-Continue with the [Router quickstart](#quickstart-route-mode-recommended) to run inference. Loading a Hub checkpoint requires access to Hugging Face on its first download; the quickstart's `Router(preload=True)` loads all three configured checkpoints at construction.
-
-- **`ModuleNotFoundError: No module named 'laya'`:** run both installation and your script with the same virtual environment's Python executable shown above. In an editor, select that interpreter as well.
-- **Missing `rl_agent_config.json`:** this file ships with a Laya checkpoint alongside `model.safetensors`; it is not a configuration file you need to create in the source repository. For a local model, pass the directory containing those checkpoint files.
-
----
-
-## Hosted API
-
-If you would rather not run a GPU, [impossibl](https://impossibl.com) serves Laya on a hosted
-endpoint, **free**, wire-compatible with TypeSafe's System One API — so a client written
-against Jev moves over by changing the base URL and the model id, and nothing else.
-
-```bash
-curl https://api.impossibl.com/v1/systemone \
-  -H "Authorization: Bearer $IMPOSSIBL_API_KEY" \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "model": "convaiinnovations/laya",
-    "state": "Hi, we were billed twice for March. Refund the duplicate today or we cancel.",
-    "questions": {
-      "churn_risk": { "type": "noul", "instructions": "Is this customer likely to churn?" }
-    }
-  }'
-```
-
-| model id | checkpoint |
+| 日期 | 事 |
 |---|---|
-| `convaiinnovations/laya` | whichever the `Router` picks, same as `Router(preload=True)` |
-| `convaiinnovations/laya-multilingual` | pins `laya-multilingual`, whatever the script |
+| 9-23 | `run_loop`：Laya 判方向 87.5% 可用，判幅度和门控不可用（见下面「Laya 在机器人上的边界」） |
+| 9-24 | PlayJev 零样本看真实图不行；把状态画成贪吃蛇画面后，方向 100% |
+| 9-28 | `run_playjev` 真机抓起蓝色套筒 |
+| 9-28~29 | `run_composite` 抓起乒乓球、蓝色套筒、黄胶带、水瓶瓶盖；托盘里的球走 335 直线接近；鸡蛋用 5 档力；点选抓球约 31s |
+| 9-29 | 俯视相机从 UGREEN 换成 Gemini 335 |
+| 9-30 | 换 335 机位和长手指后重标（留一误差 1.9mm），蓝色套筒成功；同一天夹爪过载卡滞 |
+| 10-09 | 腕部 305 走 OBSENSOR 出 0 帧 |
+| 10-12 | 末端换成灵巧手，305 重新装到手上；本流程真机暂停，决策方向改走 `../RobotDecision` |
+| 10-13 | 335 改成正上方俯视 |
+| 10-15 | 目录改名为 RobotJev，PlayJev 并入，模型放进项目的 `weights/` |
 
-The second id exists because routing is by script: Latin-script text is answered by the
-English checkpoint, so Spanish or Portuguese never reaches the multilingual weights on its
-own. Both ids run the checkpoints published here, unmodified, at `max_len` 8192.
+## 入口
 
-[Docs](https://impossibl.com/docs/evaluation) · [Model page](https://impossibl.com/convaiinnovations/laya)
-
----
-
-## Quickstart: Route Mode (Recommended)
-
-To try the Python SDK in a CPU container, see the
-[Docker Compose quickstart](docs/docker.md). It runs a sample request and keeps
-downloaded models between runs.
-
-Laya ships three checkpoints. The built-in **`Router`** is the recommended entry point: it evaluates any state in any language, automatically detects scripts and languages in sub-milliseconds, and dispatches to the optimal checkpoint in a single forward pass.
-
-```python
-from laya import Router
-
-# Preload checkpoints into memory for instant sub-35ms routing
-router = Router(preload=True)
-
-# 1. State in any language or schema
-state = {
-    "from": "user@acme.com",
-    "subject": "Duplicate charge on invoice #4411",
-    "body": "Hi, we were billed twice for March. Please refund the duplicate today or we will cancel our plan."
-}
-
-# 2. Define your typed questions
-questions = {
-    "department": {
-        "type": "choice",
-        "instructions": "Which department should handle this request?",
-        "criteria": {
-            "billing": "invoices, payments, refunds",
-            "technical": "bugs, outages, system errors",
-            "sales": "pricing, new contracts",
-            "other": "everything else"
-        }
-    },
-    "urgency": {
-        "type": "score",
-        "instructions": "How urgent is this request?",
-        "criteria": ["not urgent", "soon", "critical deadline or blocking issue"]
-    },
-    "churn_risk": {
-        "type": "noul",
-        "instructions": "Does the user threaten to cancel or leave?"
-    },
-    "refund_requested": {
-        "type": "noul",
-        "instructions": "Does the user explicitly request a refund?"
-    }
-}
-
-# 3. English state -> automatically routed to laya (ModernBERT-large, 39.5 ms)
-res_en = router.predict(state, questions)
-print("Department :", res_en["answers"]["department"]["choice"])  # -> billing (confidence: 0.94)
-print("Routing    :", res_en["routing"]["model"])                 # -> english
-
-# 4. Hindi state -> automatically routed to laya-multilingual (mmBERT-base, 32.8 ms)
-res_hi = router.predict({"body": "मुझसे दो बार शुल्क लिया गया, कृपया पैसे वापस करें।"}, questions)
-print("Department :", res_hi["answers"]["department"]["choice"])  # -> billing (confidence: 0.86)
-print("Routing    :", res_hi["routing"]["model"])                 # -> multilingual
-
-# 5. Explicit override when you want a specific checkpoint
-res_td = router.predict(state, questions, model="typed-decisions")
-```
-
-Every result carries full routing metadata explaining why the choice was made:
-
-```python
-res_hi["routing"]
-# {
-#   'model': 'multilingual',
-#   'repo': 'convaiinnovations/laya/multilingual',
-#   'reason': 'non-Latin script (devanagari, 100% of letters); the English checkpoint cannot read it'
-# }
-```
-
-Inspect a routing decision without running any forward pass:
-
-```python
-router.route({"body": "Der Kunde wurde zweimal belastet"}, questions).reason
-# "Latin script but language looks like 'de', not English"
-```
-
-Very short Latin-script text often carries nothing that identifies its language (`"Quero cancelar"`, `"Esqueci minha senha"`). Such text goes to `default`, which is `"english"` unless you change it. If most of your traffic is not English, set:
-
-```python
-router = Router(default="multilingual")
-router.route({"body": "Esqueci minha senha"}).model                 # -> multilingual
-router.route({"body": "Please refund the duplicate charge"}).model  # -> english
-```
-
-### Why Route: The Evidence
-
-On a shared benchmark (17,416 questions, one T4 GPU, identical questions per model):
-
-| Benchmark / Task | English (`laya`) | Multilingual (`laya-multilingual`) | `Router` (Routed) |
-|---|---|---|---|
-| MASSIVE intent, English | **0.783** | 0.657 | **0.783** |
-| MASSIVE intent, 13 other languages | 0.306 | **0.451** | **0.451** |
-| XNLI, English | **0.860** | 0.843 | **0.860** |
-| XNLI, 14 other languages | 0.521 | **0.731** | **0.731** |
-| Languages usable (>3x random) | 23 / 51 | 45 / 51 | **45 / 51** |
-| Latency, 1 question (T4 GPU) | 39.5 ms | **32.8 ms** | **32.8 ms** |
-| Latency, 10 questions batched | 158.6 ms | **72.3 ms** | **72.3 ms** |
-
-The English checkpoint collapses on non-Latin scripts (Khmer scores **0.000 accuracy at 0.952 confidence**). Because the model stays confident while being wrong, confidence gating cannot save you. `Router` detects the script in <0.5 ms pure Python before the forward pass.
-
-### Production Preload & Memory
-
-A cold checkpoint build costs seconds; language detection costs microseconds. The lazy default keeps **two** checkpoints resident — `english` and `multilingual`, the only two automatic routing chooses between — so a language flip costs detection only once each has been built. `max_loaded=1` rebuilds the checkpoint it just evicted on *every* switch (measured at a 7.4 s median reload on CPU and 10.3 s on T4), and traffic that only ever sees one language never builds the second, so the default costs a single-language deployment nothing.
-
-For a server or production app, preload:
-
-```python
-# Every checkpoint resident in memory; language flips cost detection only (<1 ms)
-router = Router(preload=True)
-router = Router(preload=True, device="cuda")
-
-# Or preload only the specific checkpoints you serve:
-router.preload(["english", "multilingual"])
-
-# If your app already built an agent, attach it to avoid duplicate VRAM:
-router.attach("english", existing_agent)
-
-# Manage resident memory (default keeps two hot: english + multilingual, LRU eviction)
-router = Router(max_loaded=3)       # keep all three hot, e.g. with auto_task_detection
-router = Router(max_loaded=1)       # memory-constrained host, reloads on every switch
-router.unload()                     # free memory
-```
-
-| Deployment Mode | Per-Request Latency | Model Reloads |
-|---|---|---|
-| `Router()` (lazy, `max_loaded=2`) | detection only (<1 ms) on a switch, after each language's first load | 1 the first time a language appears |
-| `Router(max_loaded=1)` | 7 to 10 s on every language switch | 1 per switch |
-| `Router(preload=True)` | **32.8 ms (GPU) / 193–464 ms (CPU)** | **none** |
-
-### Supplying Your Own Language Detection
-
-Routing asks one question: *can the English checkpoint read this state?* The built-in detector answers it from the script and a function-word heuristic, and is deliberately dependency-free. That heuristic is best-effort on Latin-script languages it holds no word list for, so a short request can carry no usable signal:
-
-```python
-from laya.lang import analyse
-analyse("Care este ora in Tokyo?")
-# {'script': 'latin', 'language': 'en', 'is_english': True}   -> the English checkpoint
-```
-
-If you already run a language-identification model, hand routing the answer instead of relying on the heuristic. `lang_guess` takes a language code or a callable receiving the state, and is checked after an explicit `lang=` and before detection:
-
-```python
-# A code you already know
-router.predict(state, questions, lang_guess="ro")
-
-# A callable, e.g. wrapping fastText, CLD3 or a transformer LID
-router.predict(state, questions, lang_guess=lambda s: my_lid(s))
-
-# Or install one for every request on a server
-router = Router(preload=True, lang_guess=my_lid)
-```
-
-The hint only decides *English or not*: a code whose primary subtag is `en`, `eng` or `english` routes to the English checkpoint and everything else routes to the multilingual one. `"en_US"` and `"en_US.UTF-8"` are read as English, so `$LANG` can be passed straight through. Returning `None`, or an empty code, makes it abstain and the built-in detector decides as before — so a LID model that is unsure does not force a checkpoint. An explicit `model=`, `task=` or `lang=` still wins, and the default path is unchanged.
-
----
-
-## Self-Hosting: HTTP Server (Jev-compatible)
-
-`laya.serve` exposes the `Router` over HTTP on the same `POST /v1/systemone`
-wire protocol as TypeSafe's hosted Jev API. Laya's answer payload is already
-schema-identical to what Jev returns (`choice`/`score`/`noul` answers and a
-`{input_tokens, output_tokens}` usage block), so an existing Jev client — e.g.
-the [`hs-jev`](https://github.com/getmissionctrl/hs-jev) Haskell client — just
-needs its `baseUrl` repointed; nothing else changes.
+都在本仓库根目录跑。**必须在根目录**：YOLO-World 和 MobileSAM 的权重是按当前目录加载的。下表省略了前缀，完整写法是：
 
 ```bash
-pip install "laya[serve]"          # adds fastapi + uvicorn
-LAYA_DEVICE=cuda LAYA_PRELOAD=1 laya-serve   # binds 0.0.0.0:8000, preloads all 3 checkpoints
+cd ~/yuhang_workspace/算法/Jev/RobotJev
+PYTHONPATH= ~/miniforge3/envs/laya/bin/python <下表的命令>
 ```
 
-```bash
-curl -s localhost:8000/v1/systemone -H 'content-type: application/json' -d '{
-  "state": {"body": "billed twice, refund please or we cancel"},
-  "questions": {"dept": {"type": "choice", "instructions": "which team?",
-                "criteria": {"billing": "refunds", "tech": "bugs"}}}
-}'
-```
+抓取前要先起 PlayJev 服务、给臂上电，完整步骤见 [SUMMARY 的「命令」](JEV_GRASP_SUMMARY.md#命令)。下表里除了最后两行，跑起来都可能开相机或连臂。
 
-Configuration is by environment variable: `LAYA_HOST`, `LAYA_PORT`,
-`LAYA_DEVICE`, `LAYA_PRELOAD`, `LAYA_MODELS` (comma list to preload),
-`LAYA_THREADS` (cap torch intra-op threads for CPU inference — keep at or below
-physical cores), `LAYA_AUTO_TASK`, and `LAYA_API_KEY` (when set, clients must
-send `Authorization: Bearer <key>`). A client's `model` field is honoured when it
-names a Laya checkpoint (`english`/`multilingual`/`typed-decisions`), otherwise
-the router auto-selects by script/language.
+| 做什么 | 命令 |
+|---|---|
+| 网页代理 | `robojev_agent.py --token <令牌>`。只绑 `127.0.0.1:8766`；网页上点「开始」时由它拉起 `click_grasp_web`，「恢复机械臂」时拉起 `atom_robot.ar5.unseize` |
+| 点选抓取 | `-m robojev.click_grasp`；加 `--dry` 只点选、看判定，不连臂 |
+| 按指令抓 | `-m robojev.run_composite --instruction "pick up the blue cylinder" --stage grasp`；常用参数见 [SUMMARY](JEV_GRASP_SUMMARY.md#命令) |
+| 放回并回 0 位 | `-m robojev.place_and_home --down 0.06`；手里没东西用 `--no-place` |
+| 依次抓几样 | 不用前缀，直接 `bash robojev/grasp_sequence.sh "pick up the X" "pick up the Y"`；不给参数时依次抓乒乓球、水瓶、蓝色圆柱。结果在 `logs/seq_<时间>/` |
+| 标定 | `-m robojev.calibrate_top335`（`--dry-run` 只算路径不动臂，`--refit` 用上次存的点重新拟合）；`-m robojev.calibrate_gripper`（`--centre` 量夹持中心）。什么时候要重做见 [SUMMARY](JEV_GRASP_SUMMARY.md#标定换了硬件要重做哪些) |
+| 读 Orbbec 出厂参数 | 换成 `lerobot` 环境（pyorbbecsdk 只装在那）：`PYTHONPATH= ~/miniforge3/envs/lerobot/bin/python -m robojev.read_orbbec_params` |
+| 看相机 | `-m robojev.view_top`，加 `--wrist` 同时看腕部 |
+| 只点选、不开相机 | `-m robojev.click_grasp --dry --frame f.npz`（用存下的一帧，npz 里要有 `color`、`depth`） |
+| 看各入口的参数 | `-m robojev.<模块> --help` |
 
-### Nix / NixOS
+## 代码地图（`robojev/`）
 
-This repo is a flake. On a machine with an NVIDIA GPU:
+**主流程**（各文件做什么见 [SUMMARY 的代码地图](JEV_GRASP_SUMMARY.md#代码地图robotjevrobojev)）
 
-```bash
-nix run .#laya-serve          # build (prebuilt CUDA torch, no compile) and serve
-nix develop                   # dev shell: torch-bin, transformers, fastapi, pytest
-```
+| 类别 | 文件 |
+|---|---|
+| 入口 | `run_composite`、`click_grasp`、`click_grasp_web`、`place_and_home`、`grasp_sequence.sh`，根目录的 `robojev_agent.py` |
+| 感知、规划、判定 | `top335`、`objects`、`perception`、`grip_force`、`clearance` |
+| PlayJev 伺服 | `snake_render`（把偏差画成贪吃蛇画面）、`probe_playjev`（`ask` 调服务） |
+| 相机、录像 | `camera`、`rec` |
+| 标定、查看 | `calibrate_top335`、`calibrate_gripper`、`read_orbbec_params`、`view_top`；结果在 `calibration/` |
+| 离线测试 | `bench_snake`（PlayJev 在贪吃蛇画面上判方向） |
 
-For a NixOS host, import the module and enable the service:
+**旧实验，但主流程还 import 它们，不能删**
 
-```nix
-# flake inputs:  laya.url = "github:<you>/laya";  # or path:/… on the same host
-{
-  imports = [ laya.nixosModules.default ];
-  services.laya-serve = {
-    enable = true;
-    host = "0.0.0.0";           # or bind to the Tailscale/LAN address
-    openFirewall = true;
-    device = "cuda";
-    models = [ "english" "multilingual" "typed-decisions" ];
-    # apiKeyFile = config.age.secrets.laya-api-key.path;  # optional bearer auth
-  };
-}
-```
+| 文件 | 主流程用的是 |
+|---|---|
+| `run_playjev` | `settle`、`adaptive_board`、`GripperXYZ` |
+| `move_pregrasp` | `slow_goto` |
+| `calibrate_top` | `path_min_z`（规划平移高度用） |
+| `composite` | `run_composite` 在模块顶层 import；只有 `--locate demo` 真用到 |
+| `top_servo` | 只有 `--locate top`（旧 UGREEN 俯视，相机已拆）用到 |
+| `bench_select` | CLIP 类 `ClipSelect` |
+| `actions` | 步长 `COARSE_M`、`FINE_M` 和 `hold` |
 
-The module runs a hardened `DynamicUser` systemd unit with CUDA device access,
-caches weights under `/var/lib/laya-serve`, and reads the bearer token (if any)
-via `LoadCredential` so it never enters the store.
+**纯旧代码**（主流程不 import）：`run_loop`、`bench_policy`、`parser`、`state`、`policy`、`localizer`、`detector`、`color_detector`、`proprio`、`calibrate`、`depth_probe`、`select_target`、`fit_demo_homography`、`wrist_refine`、`solve_down`。删之前注意：
+- `bench_policy` 和 `run_loop --sim` 是下面的离线测试，它们 import 了 `parser`、`state`、`policy`，`run_loop` 还 import 了 `localizer`、`detector`、`color_detector`；
+- `run_playjev`、`probe_playjev` 自己的命令行还会 import `color_detector`（它又 import `detector`）。
 
----
+## 离线测试
 
-## Single-Model Mode (Direct SDK)
+不连硬件。在仓库根目录、`laya` 环境下跑，命令前都加 `PYTHONPATH=`（下表省略 `PYTHONPATH= ~/miniforge3/envs/laya/bin/python`）。
 
-If you only need a single checkpoint for a dedicated pipeline, you can load models directly:
+| 命令 | 正常结果 |
+|---|---|
+| `for t in tests/test_*.py; do PYTHONPATH= ~/miniforge3/envs/laya/bin/python $t; done` | 18 个文件 17 个过。`test_local_e2e` 要手动导出到 `~/laya_models` 的模型，不算 |
+| `-m robojev.bench_policy` | 方向一致 21/24 = 87.5% |
+| `-m robojev.run_loop --instruction "把苹果放到盘子里" --sim --compare` | 54 步跑完；和解析解方向一致约 57%（`--policy geometric` 是 48 步） |
+| `run_inference_demo.py` | 跑完；中文、印地语路由到多语言模型（延迟见 [SETUP_5070Ti.md](SETUP_5070Ti.md#实测4-个问题一次前向)） |
+| 先起 PlayJev 服务，再 `-m robojev.bench_snake --n 20` | 方向全对，左右、上下镜像后 20/20 |
+| 先起 PlayJev 服务，再 `-m robojev.run_playjev --sim-target 0.50 0.05` | 跑完，方向 8/8 |
 
-```python
-import laya
+PlayJev 自己的测试见 [PlayJev/SETUP_5070Ti.md](PlayJev/SETUP_5070Ti.md#测试)。
 
-# 1. Load a specific checkpoint directly from the hub
-agent = laya.load("convaiinnovations/laya")                           # English root
-agent_ml = laya.load("convaiinnovations/laya", subfolder="multilingual") # 100+ languages
-agent_td = laya.load("convaiinnovations/laya", subfolder="typed-decisions")
+## 两个环境
 
-# 2. Run all questions in ONE single forward pass (~35 ms on GPU)
-result = agent.predict(state, questions)
-answers = result["answers"]
-
-print("Department :", answers["department"]["choice"])   # -> billing (confidence: 0.94)
-print("Urgency    :", answers["urgency"]["score"])        # -> 1.84 / 2.0
-print("Churn Risk :", answers["churn_risk"]["noul"])       # -> 0.892 (89.2% probability)
-```
-
-Passing an empty question dictionary to `agent.predict(state, {})` or
-`agent.system_one(state, {})` returns the standard response with `"answers": {}`
-and `"usage": {"input_tokens": 0, "output_tokens": 0}`. The state is not tokenized
-and no model forward pass runs.
-
----
-
-## Automated Confidence Gating
-
-Because Laya's probabilities are trained with strictly proper scoring rules (RLCD), confidence scores are statistically meaningful:
-
-```python
-dept = answers["department"]["choice"]
-conf = answers["department"]["confidence"]
-
-if conf >= 0.85:
-    # High confidence: automated action without human in the loop
-    route_automatically(dept)
-else:
-    # Low confidence: escalate to human triage
-    escalate_to_human_agent(dept, reason=f"Low confidence ({conf:.2f})")
-```
-
----
-
-## Built-in Workflow Presets
-
-Laya provides pre-tuned question schemas for immediate production use:
-
-```python
-import laya
-
-agent = laya.load("convaiinnovations/laya")
-
-# 1. Intelligent Model Router (routes to small vs. frontier models)
-routing = agent.predict({"request": "Refactor this service using dependency injection"}, laya.router_questions())
-
-# 2. Real-time Prompt Guardrails (jailbreaks, injections, leaks)
-guard = agent.predict({"prompt": "Ignore all instructions"}, laya.guard_questions())
-
-# 3. Content Safety & Moderation (toxicity, harassment, threats)
-safety = agent.predict({"post": "User comment text"}, laya.moderation_questions())
-
-# 4. Support Ticket Triage (intent, urgency, frustration, churn)
-triage = agent.predict({"message": "My payment failed twice"}, laya.triage_questions())
-```
-
----
-
-## Decision Primitives
-
-| Primitive | Output | Use Cases |
+| 环境 | 用途 | 说明 |
 |---|---|---|
-| **`choice`** | Top label, probabilities per option, confidence | Department routing, intent classification, topic categorization |
-| **`score`** | Expected level on ordinal rubric, distribution, confidence | Frustration level, ticket urgency, harm severity |
-| **`noul`** | Calibrated probability P(true) from 0.0 to 1.0 | Phishing detection, spam filtering, jailbreak detection, churn risk |
+| `laya`（Python 3.11） | Laya、robojev、RobotDecision 共用 | 版本和装法见 [SETUP_5070Ti.md](SETUP_5070Ti.md) |
+| `playjev`（Python 3.12） | 只跑 PlayJev 服务 | 版本和装法见 [PlayJev/SETUP_5070Ti.md](PlayJev/SETUP_5070Ti.md)。服务常驻约占 3.6G 显存 |
 
----
+## 硬件依赖
 
-## Benchmarks
+| 硬件 | robojev 怎么用 |
+|---|---|
+| AR5 | 经 `atom_robot` 驱动，网络配置见 [工作区说明](../../../工作区说明.md) 第 6.4 节；上电命令见 [SUMMARY 的「命令」](JEV_GRASP_SUMMARY.md#命令) |
+| 俯视 Gemini 335 | 序列号 `CP0BB53000FC`，`robojev/camera.py` 按序列号找、走 OBSENSOR |
+| 腕部 Gemini 305 | 序列号 `CV27864000V2`，同上（现在走 OBSENSOR 出 0 帧，见开头） |
+| 夹爪 HKVR-TG9801 | robojev 没有显式指定末端，靠 `atom_robot/ar5/config.py` 里 `end_effector` 的默认值 `"hkvr"` |
+| 标定文件 | `robojev/calibration/`：`top335_extrinsic.json`、`gripper.json`、`wrist_J.json` 是 9/30 的；`orbbec335_params.json` 是 9/29 的；`orbbec_params.json`、`pregrasp_pose.json`（固定抓取朝向）是 9/28 的。旧版本在 `backup_*` |
+| 模型 | 根目录的 `yolov8x-worldv2.pt`、`mobile_sam.pt`；`weights/clip/`（CLIP）；`weights/laya/`（Laya）；`PlayJev/weights/PlayJev-0.8B/`。都不进 git |
 
-Community diagnostic: [Chinese workplace decisions (Feishu-style)](research/benchmarks/feishu_zh/README.md) · [中文说明](research/benchmarks/feishu_zh/README.zh-CN.md). Includes frozen synthetic cases, archived paired Laya/Jev responses, and an offline audit; separate from the benchmark suites below.
+## 已知问题和提示
 
-**Full report: [`BENCHMARKS.md`](BENCHMARKS.md)** — every run consolidated, languages and themes, with per-language detail for all 51 languages.
+- **真机跑不了**、**别和 RobotDecision 抢相机**：见开头两条。
+- 抓取流程本身的问题（固定朝向够不着的区域、外参和末端耦合、走廊里的假障碍、力度类别分差小等）见 [SUMMARY 的已知问题](JEV_GRASP_SUMMARY.md#当前状态与已知问题10-15)。
+- `run_composite.py` 开头的模块文档（`--help` 打出来的那段）还是 9-28 早上的流程，比如示范单应性、夹持中心 [15,32,88]mm，以 SUMMARY 为准。
+- **本机请求别走代理**：`.bashrc` 设了 `http_proxy`，连 `127.0.0.1` 也会走代理；PlayJev 服务没起时，代理会回 502，把「连接被拒」遮住。`probe_playjev.ask` 已经绕开代理；自己用 `curl` 测本机服务时加 `--noproxy '*'`。
+- 机器重启后 PlayJev 服务不会自己起来。内核升级后 GPU 驱动可能掉；GPU 用不了时，可以临时用 `PlayJev/serve_cpu.py` 在 CPU 上起服务，很慢，只能应急，用法见 [PlayJev/SETUP_5070Ti.md](PlayJev/SETUP_5070Ti.md#跑)。
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/NandhaKishorM/laya/main/assets/laya_benchmark.png" alt="Per-language accuracy for both checkpoints across 51 languages" width="100%" />
-</p>
+## Laya 在机器人上的边界
 
-All Laya numbers below are measured. Every model answered byte-identical questions
-(fixed seed) in the same run. Reproduce with
-[`research/scripts/laya_benchmark_colab.ipynb`](research/scripts/laya_benchmark_colab.ipynb) on a T4.
+9-23 用 `run_loop` 把 Laya 接进 AR5 闭环：一句指令 → YOLO 感知 → 把偏差写成话 → Laya 从 12 个离散动作（6 个方向 × 2 档幅度）里选 → 臂执行。结论：**Laya 只能用来判方向。**
 
-### Speed (Tesla T4, measured)
+`bench_policy` 的实测（24 道方向题，判据是解析解）：
 
-| questions per call | `laya` | `laya-multilingual` |
-|---|---|---|
-| 1 | 39.5 ms | **32.8 ms** |
-| 5 | 84.5 ms | **40.1 ms** |
-| 10 | 158.6 ms (15.9 ms/q) | **72.3 ms (7.2 ms/q)** |
-| 50 | 771 ms | **337 ms (6.8 ms/q)** |
-
-Batched throughput reaches 103-332 questions/sec on a single T4. For reference, TypeSafe Jev
-has been independently measured at 236-276 ms p50
-([AbdelStark](https://github.com/AbdelStark/jev-benchmarks),
-[nibzard](https://github.com/nibzard/decision-model-benchmark)) -- Laya answers a single
-question roughly **6-7x faster**.
-
-### Laya (with routing) vs Jev
-
-Every Laya figure is what `Router().predict(...)` actually returns — the checkpoint the router
-selects for that input, not a hand-picked best of three. Jev figures are **third-party
-published, never measured here** (no TypeSafe API access), so sample sizes and prompts differ.
-
-| | Jev 1.13.0 | Laya (routed) | |
+| 问的东西 | 表现 | 随机基线 | 用不用 |
 |---|---|---|---|
-| typed-decisions, 2,000 decisions | 0.727 | **0.766** | +0.039 |
-| AG News, 4 labels | 0.910 | **0.950** | +0.040 |
-| DAIR Emotion, 6 labels | 0.480 | **0.595** | +0.115 |
-| Banking77 (72 vs 77 labels) | **0.870** | 0.425 | Jev leads on >20 options |
-| ECE *(lower better)* | 0.246 | **0.081** | 3× better (post-temperature) |
-| p50 latency, 1 question | 236–276 ms | **32.8 ms** | 7.8× faster |
-| Languages usable | *no published benchmark* | **45 of 51** | — |
-| Weights | closed API | **Apache 2.0** | — |
-| Cost | $0.042 / 1M tokens | **$0 self-hosted** | — |
+| 方向（6 选 1） | **87.5%** | 16.7% | 交给 Laya |
+| 幅度（2 选 1） | 0% | 50% | 按距离硬判 |
+| 该不该合爪（`grasp_now`，noul） | 和距离无关 | — | 按距离硬判 |
 
-On DAIR Emotion, Jev assigned **zero probability to the true label on 16% of examples** — a hard
-failure for anything branching on confidence.
+- **口语化是成败的关键。** 第一版把偏差写成 `dx=+0.180 m` 喂给它，8 道方向题只对 1 道（12.5%）；改成「The apple is 18 centimetres to the LEFT of the gripper」后到 79%；再把幅度从问题里拿掉，到 87.5%。原因见 `state.py` 的模块文档。
+- **幅度和门控是常数。** 扫一遍距离（9-23 实测，记在 `policy.py` 的注释里）：
 
-#### Where Jev leads
-
-* **High-cardinality label spaces (>20 options at default settings):** On Banking77, Jev scores 0.870 (on 72 labels) while Laya scores 0.425 (on 77 labels at default 256-token head budget). This is an architectural token-budget constraint: options share a fixed `head_max_len` budget (192 tokens on English, 256 on multilingual), so 77 options receive only ~3 to 4 tokens per label, causing text to become indistinguishable. Jev supports up to 255 options out-of-the-box. While `laya-multilingual` supports 1,024 context (and up to 8,192 in the encoder) and you can raise `agent.cfg["head_max_len"] = 512` at runtime, Jev is currently better suited for 50+ options in a single prompt without tuning. `predict_shortlist` (see [Honest limits](#honest-limits)) keeps the top `k` labels with a caller-supplied embedding, then runs one forward pass on that shortlist.
-* **Soft distribution matching:** On typed-decisions, while Laya achieves higher argmax accuracy (0.766 vs 0.727), Jev achieves higher soft accuracy (0.580 vs 0.471) against the teacher's full probability distributions.
-* **Out-of-the-box raw calibration:** Before temperature scaling, the base checkpoint has higher raw ECE (0.213 vs 0.144). Laya achieves its 0.081 ECE after domain temperature fitting.
-
-Full detail, including every workflow and all 51 languages: **[`BENCHMARKS.md`](BENCHMARKS.md)**.
-
-### typed-decisions, measured on all three checkpoints
-
-400 cases, 2,000 decisions, four workflows.
-
-| model | accuracy | soft acc | Brier | ECE | score MAE |
-|---|---|---|---|---|---|
-| **`laya-typed-decisions`** | **0.766** | 0.471 | **0.062** | 0.213 | **0.242** |
-| `laya` | 0.362 | 0.332 | 0.316 | 0.175 | 0.694 |
-| `laya-multilingual` | 0.342 | 0.326 | 0.439 | 0.285 | 0.687 |
-| *Jev 1.13.0 (published)* | *0.727* | *0.580* | *0.148* | *0.144* | *0.391* |
-| *teacher self-agreement ceiling* | *0.735* | | | | |
-| *per-question majority class* | *0.461* | | | | |
-| *random guess* | *0.318* | | | | |
-
-The fine-tuned checkpoint beats Jev by 3.9 points and clears the teacher ceiling, with 2.4x
-better Brier and 1.6x better score MAE. It wins on all four workflows: invoice processing
-0.804, security incidents 0.766, customer service 0.764, agent-trace observability 0.730.
-By primitive: `noul` 0.857, `choice` 0.733, `score` 0.723.
-
-Two places it still trails Jev: **soft accuracy** (0.471 vs 0.580 — its argmax is better but
-its distributions match the teacher less well) and **ECE** (0.213 vs 0.144), which temperature
-fitting addresses.
-
-**The base checkpoints sit below the majority-class baseline** (0.362 and 0.342 against 0.461).
-All of the capability on this benchmark comes from fine-tuning.
-
-### Multilingual (51 languages, MASSIVE intent, 20 options, random = 0.050)
-
-| | `laya` | `laya-multilingual` |
-|---|---|---|
-| English | **0.783** | 0.657 |
-| 13 other languages | 0.306 | **0.451** |
-| XNLI, English | **0.860** | 0.843 |
-| XNLI, 14 other languages | 0.521 | **0.731** |
-
-Across all 51 languages the English checkpoint macro-averages **0.227** with macro ECE
-**0.733**, and only 23 of 51 languages clear 3x random. Khmer scores **0.000 at 95.2%
-confidence**. This is why [`Router`](#model-routing-three-checkpoints-one-call) exists: the
-model's own confidence gives no warning, so the routing decision has to be made before the
-forward pass.
-
-### English tasks
-
-| task | `laya` | `laya-multilingual` | note |
-|---|---|---|---|
-| AG News | **0.947** | 0.937 | in training mix |
-| BoolQ | **0.830** | 0.787 | in training mix |
-| DAIR Emotion | **0.573** | 0.513 | held out |
-| prompt-injections | **0.698** | 0.578 | held out, n=116 |
-| SST-5 (ordinal) | 0.372 | 0.282 | held out |
-
-### Calibration
-
-Both checkpoints are over-confident as shipped. Refitting one temperature per (question type,
-option count) on held-out data moves mean ECE **0.466 -> 0.081** (`laya`) and
-**0.314 -> 0.106** (`laya-multilingual`). `laya-multilingual` ships with no fitted
-temperatures at all, so fit them before relying on its probabilities.
-
-At checkpoint load, numeric temperature entries are clamped to `[0.5, 5.0]`; invalid or
-non-finite entries use the neutral fallback `1.0`. A runtime warning reports the affected
-entries and applied values. Bucket-specific temperatures still take precedence over per-type
-values, including when a bucket uses the fallback. Raw values remain available in
-`agent.temperature_raw` and `agent.temperature_by_options_raw`. A fallback prevents a loading
-failure; it does not establish calibrated confidence.
-
-### Honest limits
-
-* **The base checkpoints are near chance on typed-decisions zero-shot** -- 0.362 and 0.352
-  against a 0.318 random baseline and a 0.461 majority-class baseline. The 0.766 figure comes
-  from the checkpoint fine-tuned on that benchmark's own training split. Laya is a fast base to
-  specialise, not a zero-shot decision engine.
-* **High-cardinality choice questions and token budgets:** Sequences split into an option prompt budget (`head_max_len`) and the remaining document/state budget (`max_len - head_max_len`):
-  * `laya` (English) defaults to 512 context (`head_max_len = 192`, ~320 tokens for state).
-  * `laya-multilingual` and `laya-typed-decisions` default to 1,024 context (`head_max_len = 256`, ~768 tokens for state; mmBERT-base encoder supports up to 8,192 with RoPE).
-  At default settings, a 77-option question like Banking77 allocates only `(256 - 16) // 77` ≈ 3–4 tokens per label, which causes accuracy to fall off sharply (0.425 vs Jev's 0.870). If evaluating 50+ options in a single question:
-  1. Raise `agent.cfg["head_max_len"] = 512` and `agent.cfg["max_len"] = 1024` (or up to 2048 / 4096 / 8192) so every option has enough tokens to remain distinct.
-  2. Or shortlist with embeddings and run one forward pass on the top `k` labels (`predict_shortlist`, example below). `predict` and `system_one` still score every criterion they are given.
-  3. Or split the label set yourself into a coarse question and a fine question.
-
-```python
-import laya
-
-questions = {
-    "intent": {
-        "type": "choice",
-        "instructions": "Which banking intent is this?",
-        "criteria": {
-            "card_arrival": "where is my card",
-            "transfer_fee": "fee charged on a transfer",
-            # ...the rest of a large label set
-        },
-    }
-}
-result = laya.predict_shortlist(
-    agent,
-    {"text": "I was charged twice for a transfer"},
-    questions,
-    embed_fn=laya.embed_fn_from_agent(agent),  # or any callable: texts -> (n, dim)
-    k=20,
-)
-result["shortlist"]["intent"]["labels"]  # the top 20 labels sent to the model
-```
-
-`embed_fn(texts)` returns one vector per string. `embed_fn_from_agent` mean-pools the encoder already loaded on the agent; the decision head runs in the following `predict` / `system_one` call. Probabilities on a shortlisted choice are over those `k` labels. When `k` is at least the number of labels, the original question is passed through and `embed_fn` is not called.
-
-[Issue #102](https://github.com/NandhaKishorM/laya/issues/102) reports that a top-20 zero-shot shortlist moved a BANKING77 run from 54.3% to 60.8% on the reporter's setup. Those figures are the reporter's; this repository has not remeasured them.
-
-* Ordinal `score` questions are the weakest primitive (SST-5 0.372).
-* **`noul` can follow its option labels instead of the state, most strongly on `laya` (English).** `noul` renders its two options as `false:` / `true:`, and on the English checkpoint that label pair can dominate the answer, returning a confident "no" for clearly positive input (#156). Until a retrained checkpoint lands, check `noul` answers on your own data. If they look stuck, ask the same question as a two-option `choice` with neutral keys and your yes/no wording as the descriptions:
-
-  ```python
-  {"type": "choice", "instructions": "Is this review positive?",
-   "criteria": {"A": "yes, the review is positive", "B": "no, the review is negative"}}
   ```
-* **`laya-multilingual` has a position bias on `score` questions** (#131): it rarely picks the first-listed level, in any language. For English score questions, route to `model="english"`, and for other languages validate score outputs on your own data before relying on them.
-* **`action.act_probability` carries no usable signal yet** (#185). It reads 1.0 for almost every input, and its raw logits run against correctness (AUROC 0.30 on 396 labelled decisions). Gate on `confidence` instead, which reaches an AUROC of 0.77 on the same items.
-* `laya` collapses outside English; `laya-multilingual` is weaker on English. Route, or pick
-  deliberately.
+  距离      30cm   20cm   12cm   8cm    5cm    3cm    1cm
+  P(big)   0.212  0.232  0.221  0.191  0.114  0.200  0.204
+  grasp    0.655  0.540  0.644  0.638  0.625  0.656  0.646
+  ```
 
----
+  距离变了 30 倍，输出不动。Laya 是非自回归的分类头，读不出数字大小。
+- **闭环照样能完成。** 三个轴同时有偏差时，和解析解方向一致只有约 57%，但只要选的方向能减小某个轴的偏差，闭环就会收敛，只是路径不是最短（Laya 54 步，解析解 48 步）。
+- **选目标也不行。** 「8 条换了说法的指令里选对哪个候选」，Laya 只对 3~4 条，而且是按选项位置在猜（`bench_select.py` 的模块文档，9-28）。现在选目标交给 CLIP。
+- **判力度、判抓取位置也不行。** 回答和物体无关：把选项倒序，Laya 就跟着换答案，是按选项位置选的（`grip_force.py` 的模块文档，9-29）。现在这两件事交给 CLIP。
 
-## Community Tools
+`run_loop` 那条链踩过的坑（细节在各文件的模块文档里）：
 
-* **[omp-laya-judge](https://github.com/F0Rextasy/omp-laya-judge)**: an [oh-my-pi](https://github.com/can1357/oh-my-pi) plugin with a local System-1 judge MCP server and skill (`choice`/`bool`/`score`, 0 tokens, about 0.3 s on CPU), confidence-gated escalation, and reproducible quiz and Snake demos.
-* [laya-adk-toolkit](https://github.com/Ashfaqbs/laya-adk-toolkit) — [Google ADK](https://google.github.io/adk-docs/) tools that let an agent call Laya's `classify`/`score`/`detect` typed decisions directly as tools, instead of asking an LLM to guess at structured output.
+1. **相机后端互相污染。** 同一台 Orbbec 上 OBSENSOR 和 V4L2 不能交替用，切换之间要复位 USB 再等 8 秒（等 3 秒不够），`camera.py` 打开前会自动做。见 `depth_probe.py`。腕部 305 现在的情况更糟，见开头。
+2. **粗档步长要小于 `max_lead`（15mm），不是小于 `max_step_translation`（20mm）。** 取 18mm 时每一步都被缰绳限速，不报错，只在 `env.stats['leashed']` 里看得见。现在取 12mm（`actions.py` 的 `COARSE_M`）。
+3. **yolo11n 在俯视桌面上认不出东西**（水瓶 conf 0.07，还误检成 cup），默认改成 yolo11s。见 `detector.py`。
+4. **COCO 没有 plate。** 说「盘子」会被映射成 `bowl`，`Task.notes` 里会写明。见 `parser.py`。
+5. **SVD 求刚体变换必须查行列式**，否则噪声下会解出镜像矩阵。见 `calibrate.py` 的 `kabsch()`。
 
----
+## 文档索引
 
-## Live Demo & Resources
-
-* **Hugging Face Model:** [convaiinnovations/laya](https://huggingface.co/convaiinnovations/laya)
-* **Interactive Web Demo:** [convaiinnovations/laya-demo](https://huggingface.co/spaces/convaiinnovations/laya-demo)
-* **Engineering Writeup:** [Read the full story on Dev.to](https://dev.to/nandakishor_m_6cc0adfde9f/i-built-non-autoregressive-decision-models-a-year-ago-then-a-frontier-lab-called-it-a-18me)
-
----
-
-## Fine-Tuning
-
-Fine-tune Laya on your own domain data. The notebook runs on Kaggle's free 2xT4 GPUs and does
-the whole loop: build the dataset, train with RLCD (proper-scoring-rule rewards, GRPO-style
-policy gradient), fit calibration temperatures, evaluate, and push the result to the Hub.
-
-* **[`notebooks/laya_finetune_typed_decisions_2xT4_kaggle.ipynb`](notebooks/laya_finetune_typed_decisions_2xT4_kaggle.ipynb)**
-
-The notebook fits one `temperature` per type (`choice`, `score`, `noul`) and removes inherited
-`temperature_by_options` from the exported config. Otherwise those old bucket values take
-precedence at inference and silently mask the new fit. Existing checkpoints still honor
-intentional bucket-specific temperatures, falling back to the corresponding per-type value
-when a bucket is absent; the runtime's temperature clamp is unchanged.
-
-This fixes configuration persistence, not measured model accuracy or calibration quality.
-The notebook's calibration samples come from its training items; evaluate on separate held-out
-data before claiming an improvement. Already published checkpoints are not rewritten.
-Run the CPU-only regression checks with `python tests/test_calibration_persistence.py`
-(synthetic configs and tiny local fixtures; no pretrained downloads or training).
-
-Fine-tuning is where most of the value is. On the typed-decisions benchmark the base
-checkpoints score near chance zero-shot (0.36 and 0.35 against a 0.318 random baseline),
-while the fine-tuned checkpoint reaches **0.766** on the same 2,000 decisions -- above
-TypeSafe Jev's published 0.727 and above the 0.735 teacher self-agreement ceiling. Treat Laya
-as a fast base to specialise, not as a zero-shot decision engine.
-
-Runtime on 2xT4 is roughly 4-5 hours for 4 epochs over ~30k questions.
-
-### Worked example: a browser-agent decision head
-
-[`docs/finetune_browser_agent.md`](docs/finetune_browser_agent.md) records a complete specialisation
-on a single 16 GB GPU with no paid API: Laya as the operation/target decider for
-[browser-use/jev-ultrafast](https://github.com/browser-use/jev-ultrafast) (same request format as
-TypeSafe Jev). Element top-1 among ~45 candidates goes from 0.10 zero-shot to 0.66, real-task
-success from 0 % to 62 % at 17-23 ms per step; weights, pipeline code and per-run results are on
-the Hub at [cklxx/laya-browser](https://huggingface.co/cklxx/laya-browser). The write-up covers the
-data recipe (reverse-generated goals, executed DONE states, Mind2Web, on-policy corrections), the
-input-format change that mattered most, and the things that did not work.
-
----
-
-## Support the Project
-
-If Laya helps your research or products, consider supporting independent research:
-
-<p align="left">
-  <a href="https://www.buymeacoffee.com/nandakishorm" target="_blank">
-    <img src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=nandakishorm&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" alt="Buy Me A Coffee" />
-  </a>
-</p>
-
----
-
-## License
-
-Apache 2.0. Developed by Convai Innovations.
+| 文档 | 内容 |
+|---|---|
+| [JEV_GRASP_SUMMARY.md](JEV_GRASP_SUMMARY.md) | 抓取流程（`run_composite`、`click_grasp`）的完整说明：每个数从哪来、标定、命令、实测记录、已知问题；附录是设计时踩过的坑 |
+| [SETUP_5070Ti.md](SETUP_5070Ti.md) | `laya` 环境：版本、重建、权重、测试 |
+| [PlayJev/SETUP_5070Ti.md](PlayJev/SETUP_5070Ti.md) | `playjev` 环境：版本、重建、起服务、测试 |
+| [上游来源.md](上游来源.md)、[PlayJev/上游来源.md](PlayJev/上游来源.md) | 上游仓库、提交号、改过什么 |
+| [README_laya.md](README_laya.md) | 上游 Laya 的说明 |
+| [PlayJev/README.md](PlayJev/README.md) | 上游 PlayJev 的说明 |
+| [../RobotDecision](../RobotDecision) | 10-12 以后的决策方向（自动抓取闭环） |
+| [../../../工作区说明.md](../../../工作区说明.md) | 整个工作区：结构、环境、约定、离线测试、迁移 |
