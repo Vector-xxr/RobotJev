@@ -73,7 +73,7 @@ def ask(img_bgr: np.ndarray, instructions: str, moves: Dict[str, str] = None,
         if isinstance(exc, urllib.error.HTTPError):
             raise
         raise ConnectionError(f"连不上 PlayJev 服务 {SERVER}：{exc.reason}。先起服务："
-                              "cd 算法/Jev/RoboJev/PlayJev && python -m playjev.serve "
+                              "cd 算法/Jev/RobotJev/PlayJev && python -m playjev.serve "
                               "--ckpt weights/PlayJev-0.8B --port 18732") from exc
 
 

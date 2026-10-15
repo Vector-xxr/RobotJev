@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """实时看顶部相机（Gemini 335）：左彩色、右深度伪彩色，标帧率。按 q / Esc 关。
 
-    conda activate laya; cd ~/yuhang_workspace/算法/Jev/RoboJev
+    conda activate laya; cd ~/yuhang_workspace/算法/Jev/RobotJev
     PYTHONPATH= python -m robojev.view_top            # 只看顶部
     PYTHONPATH= python -m robojev.view_top --wrist    # 顶部 + 腕部
 

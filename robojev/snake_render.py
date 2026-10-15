@@ -18,7 +18,7 @@
 唯一需要标定的是「真实相机里目标的像素 → 基座 xy」，那是 localizer 的事。
 
 只管平面 (x,y)。高度不交给模型：对准之后竖直下探、合爪、抬起是脚本，
-和 RoboJev 里「Laya 管方向、距离管门控」同一个分工。
+和 RobotJev 里「Laya 管方向、距离管门控」同一个分工。
 """
 
 from __future__ import annotations

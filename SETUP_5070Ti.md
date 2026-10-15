@@ -1,7 +1,7 @@
 # Laya 本机环境（5070Ti，2026-09-23）
 
 上游：https://github.com/NandhaKishorM/laya （Apache-2.0，Convai Innovations）
-本地 clone 在 `算法/Jev/RoboJev/`，以 editable 方式装进 conda 环境 `laya`。
+本地 clone 在 `算法/Jev/RobotJev/`，以 editable 方式装进 conda 环境 `laya`。
 
 ## 环境
 

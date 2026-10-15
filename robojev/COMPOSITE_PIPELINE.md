@@ -158,8 +158,8 @@ YOLO-World 找框 → CLIP 确认 → MobileSAM 分割 → 去畸变 → 对上�
 
 | 做什么 | 环境 | 目录 |
 |---|---|---|
-| PlayJev 服务 | `playjev` | `~/yuhang_workspace/算法/Jev/RoboJev/PlayJev` |
-| 抓取、放回、上电 | `laya` | 抓取、放回在 `~/yuhang_workspace/算法/Jev/RoboJev`；上电在 `~/yuhang_workspace/数据_硬件/SO101` |
+| PlayJev 服务 | `playjev` | `~/yuhang_workspace/算法/Jev/RobotJev/PlayJev` |
+| 抓取、放回、上电 | `laya` | 抓取、放回在 `~/yuhang_workspace/算法/Jev/RobotJev`；上电在 `~/yuhang_workspace/数据_硬件/SO101` |
 
 每条命令前都要加 `PYTHONPATH=`，把 PYTHONPATH 清空。原因是 ROS 往 PYTHONPATH 里塞了自己的包，会让导入报错。
 
@@ -169,7 +169,7 @@ YOLO-World 找框 → CLIP 确认 → MobileSAM 分割 → 去畸变 → 对上�
 
 ```bash
 conda activate playjev
-cd ~/yuhang_workspace/算法/Jev/RoboJev/PlayJev
+cd ~/yuhang_workspace/算法/Jev/RobotJev/PlayJev
 PYTHONPATH= python -m playjev.serve --ckpt weights/PlayJev-0.8B --port 18732
 ```
 
@@ -183,7 +183,7 @@ cd ~/yuhang_workspace/数据_硬件/SO101
 PYTHONPATH= python -m atom_robot.ar5.power_on --enable --yes
 
 # 抓取、放回：
-cd ~/yuhang_workspace/算法/Jev/RoboJev
+cd ~/yuhang_workspace/算法/Jev/RobotJev
 PYTHONPATH= python -m robojev.run_composite --instruction "pick up the blue cylinder" --stage grasp
 PYTHONPATH= python -m robojev.place_and_home --down 0.06    # 抬多少降多少，放回，张爪，回 0 位
 PYTHONPATH= python -m robojev.place_and_home --no-place     # 手里没东西，直接回 0 位

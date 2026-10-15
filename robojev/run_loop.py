@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""RoboJev 闭环：一句指令 -> 感知 -> 特权信息 -> Laya 选动作 -> 机械臂执行 -> 再看。
+"""RobotJev 闭环：一句指令 -> 感知 -> 特权信息 -> Laya 选动作 -> 机械臂执行 -> 再看。
 
     # mock 臂 + 真相机，最安全的那档
     python -m robojev.run_loop --instruction "把苹果放到盘子里"

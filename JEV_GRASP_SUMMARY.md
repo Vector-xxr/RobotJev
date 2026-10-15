@@ -189,12 +189,12 @@
 ```bash
 # 终端 1：PlayJev 服务（一直开着）
 conda activate playjev
-cd ~/yuhang_workspace/算法/Jev/RoboJev/PlayJev
+cd ~/yuhang_workspace/算法/Jev/RobotJev/PlayJev
 PYTHONPATH= python -m playjev.serve --ckpt weights/PlayJev-0.8B --port 18732
 
 # 终端 2：抓取
 conda activate laya
-cd ~/yuhang_workspace/算法/Jev/RoboJev
+cd ~/yuhang_workspace/算法/Jev/RobotJev
 PYTHONPATH= python -m robojev.run_composite --instruction "pick up the blue cylinder" --stage grasp   # 按指令抓
 PYTHONPATH= python -m robojev.click_grasp                                                     # 点选抓取
 PYTHONPATH= python -m robojev.click_grasp --dry                                               # 只点选、看判定，不连臂
@@ -217,7 +217,7 @@ PYTHONPATH= python -m robojev.place_and_home --no-place                         
 
 ---
 
-## 代码地图（`RoboJev/robojev/`）
+## 代码地图（`RobotJev/robojev/`）
 
 | 文件 | 内容 |
 |---|---|

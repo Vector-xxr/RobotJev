@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """鼠标点选抓取：335 拍一帧 -> 点要抓的物体 -> SAM 分割出框和边缘、量高 / 宽、判能不能抓 -> Enter -> 臂去抓。
 
-    conda activate laya; cd ~/yuhang_workspace/算法/Jev/RoboJev
+    conda activate laya; cd ~/yuhang_workspace/算法/Jev/RobotJev
     PYTHONPATH= python -m robojev.click_grasp                         # 点选 + 抓取
     PYTHONPATH= python -m robojev.click_grasp --record /tmp/rec       # 同上，并录像
     PYTHONPATH= python -m robojev.click_grasp --dry                   # 只点选、看判定，不连臂

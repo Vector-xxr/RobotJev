@@ -2,7 +2,7 @@
 # 按顺序：抓 -> 放下 -> 抓下一个。每个任务统计抓取时间（相机就绪 -> 抬起结束，不含放下）。
 #
 #   conda activate laya
-#   cd ~/yuhang_workspace/算法/Jev/RoboJev
+#   cd ~/yuhang_workspace/算法/Jev/RobotJev
 #   bash robojev/grasp_sequence.sh                                   # 默认：乒乓球 -> 水瓶 -> 蓝色圆柱
 #   bash robojev/grasp_sequence.sh "pick up the X" "pick up the Y"   # 自己给顺序
 #

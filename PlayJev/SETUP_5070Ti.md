@@ -8,7 +8,7 @@
 
 ```bash
 conda activate playjev        # /home/crp-5070ti-01/miniforge3/envs/playjev
-cd 算法/Jev/RoboJev/PlayJev
+cd 算法/Jev/RobotJev/PlayJev
 ```
 
 | 组件 | 版本 |
@@ -92,9 +92,9 @@ cd demo && python -m http.server 18080 --bind 127.0.0.1
 CORS 已验证：serve 返回 `Access-Control-Allow-Origin: *`，:18080 的 demo 跨源调 :18732 不会被挡。
 `curl` 打本机服务记得 `--noproxy '*'`，否则被 http_proxy 劫持。
 
-## 和 RoboJev / Laya 什么关系
+## 和 RobotJev / Laya 什么关系
 
 同一个 System One 形状（state + typed questions → 带概率的 typed answers），
-但**输入是像素不是文本**。RoboJev 那条链现在是靠 YOLO 把图像压成一句话再喂给纯文本的
+但**输入是像素不是文本**。RobotJev 那条链现在是靠 YOLO 把图像压成一句话再喂给纯文本的
 Laya；PlayJev 这种形态是直接从像素出动作分布，正好是那条链绕开的东西。
 两者的 `/v1/systemone` 请求形状是兼容的，只是 state 一个放 `frames` 一个放 `body`。

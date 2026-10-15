@@ -1,4 +1,4 @@
-# RoboJev：用 Laya 做机器人闭环决策
+# RobotJev：用 Laya 做机器人闭环决策
 
 一句指令 → YOLO 感知 → 特权信息 → Laya 从 12 个离散动作里选 → AR5 执行 → 再看一帧。
 
@@ -22,7 +22,7 @@
 
 ```bash
 conda activate laya
-cd 算法/Jev/RoboJev
+cd 算法/Jev/RobotJev
 
 # 0) 深度流验证（已通过，留着复跑用）
 python -m robojev.depth_probe

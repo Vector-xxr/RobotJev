@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """网页点选抓取：把 click_grasp 的 OpenCV 弹窗换成网页，别的一行不动。
 
-    conda activate laya; cd ~/yuhang_workspace/算法/Jev/RoboJev
+    conda activate laya; cd ~/yuhang_workspace/算法/Jev/RobotJev
     PYTHONPATH= python -m robojev.click_grasp_web --link ~/.atom_agent/robojev_click         # 点选 + 抓取
     PYTHONPATH= python -m robojev.click_grasp_web --link ~/.atom_agent/robojev_click --dry   # 只点选看判定，不连臂
 
