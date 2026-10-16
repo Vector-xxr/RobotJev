@@ -2,6 +2,13 @@
 
 在 Laya 和 PlayJev 两个开源决策模型上做 AR5 的「万物可抓」。位置、高度、宽度、力度全部由俯视 Gemini 335、腕部 Gemini 305 的深度，加上 YOLO-World、CLIP、MobileSAM 现场量出来；PlayJev 只在腕部伺服时选上下左右。抓取流程的完整说明见 [JEV_GRASP_SUMMARY.md](JEV_GRASP_SUMMARY.md)。
 
+> [!NOTE]
+> **放在 GitHub 上要知道的**：这个仓库原本是一个更大工作区里的项目（`<工作区>/算法/Jev/RobotJev/`）。
+> - 连真机要用仓库外的 `atom_robot`（AR5 臂驱动、夹爪驱动，在原工作区 `数据_硬件/SO101/`，没有公开）和珞石 SDK。`robojev` 包按固定层数找它（从 `robojev/` 往上 4 层就是工作区根，再找 `数据_硬件/SO101`），所以本仓库要放在 `<工作区>/算法/Jev/RobotJev/`；只有网页代理 `robojev_agent.py` 认环境变量 `YUHANG_WS`。
+> - 模型（`weights/laya/`、`weights/clip/`、`PlayJev/weights/`、根目录的 `*.pt`）不在仓库里，来源见 [SETUP_5070Ti.md](SETUP_5070Ti.md) 和 [PlayJev/SETUP_5070Ti.md](PlayJev/SETUP_5070Ti.md)。
+> - 根目录的上游代码是 [NandhaKishorM/laya](https://github.com/NandhaKishorM/laya)，`PlayJev/` 是 [OmniJev/PlayJev](https://github.com/OmniJev/PlayJev)，都是 Apache-2.0（[LICENSE](LICENSE)、[PlayJev/LICENSE](PlayJev/LICENSE)），出处见 [上游来源.md](上游来源.md)。
+> - 文中指向 `../../../工作区说明.md`、`../RobotDecision` 等的链接是原工作区里的其他项目，在这里打不开（RobotDecision 也已公开：[Vector-xxr/RobotDecision](https://github.com/Vector-xxr/RobotDecision)）。
+
 > [!WARNING]
 > **按现在的硬件，真机流程跑不了。** 9/30 的标定全部作废：
 > - 末端从 TG9801 夹爪换成了因时灵巧手（10-12），而 robojev 的满开宽度、力度档位、手指扫掠盒、`gripper.json` 都是按夹爪定的；
