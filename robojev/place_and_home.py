@@ -23,13 +23,13 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "数据_硬件" / "SO101"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "算法" / "DexGraspVLA-" / "SO101"))
 
 from . import actions as A                               # noqa: E402
 from .move_pregrasp import slow_goto                     # noqa: E402
 from .run_playjev import GripperXYZ, settle              # noqa: E402
 
-CENTRE = Path(__file__).resolve().parents[4] / "数据_硬件" / "SO101" / "atom_robot" / "ar5" / "joint_calibration.json"
+CENTRE = Path(__file__).resolve().parents[4] / "算法" / "DexGraspVLA-" / "SO101" / "atom_robot" / "ar5" / "joint_calibration.json"
 
 
 def hold_gripper(env, value: float, seconds: float) -> None:

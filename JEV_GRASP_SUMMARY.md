@@ -193,7 +193,7 @@ cd ~/yuhang_workspace/算法/Jev/RobotJev/PlayJev
 PYTHONPATH= ~/miniforge3/envs/playjev/bin/python -m playjev.serve --ckpt weights/PlayJev-0.8B --port 18732
 
 # 终端 2：臂没上电、或者刚松开急停时，先上电（急停也会让夹爪断掉反馈）
-cd ~/yuhang_workspace/数据_硬件/SO101
+cd ~/yuhang_workspace/算法/DexGraspVLA-/SO101
 PYTHONPATH= ~/miniforge3/envs/laya/bin/python -m atom_robot.ar5.power_on --enable --yes
 
 # 终端 2：抓取（必须在 RobotJev 根目录下跑，YOLO-World 和 MobileSAM 的权重按当前目录找）

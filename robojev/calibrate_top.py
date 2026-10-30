@@ -30,7 +30,7 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "数据_硬件" / "SO101"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "算法" / "DexGraspVLA-" / "SO101"))
 
 from . import actions as A                               # noqa: E402
 
@@ -268,7 +268,7 @@ def main() -> int:
             z_touch_layers=z_touch, J=J.tolist(), reproj_px_median=float(np.median(err[good])),
             points=rec, date=time.strftime("%Y-%m-%d %H:%M")), indent=1))
         print(f"已写 {OUT}")
-        slow_goto(env, np.asarray(json.loads((Path(__file__).resolve().parents[4] / "数据_硬件" / "SO101" / "atom_robot" / "ar5"
+        slow_goto(env, np.asarray(json.loads((Path(__file__).resolve().parents[4] / "算法" / "DexGraspVLA-" / "SO101" / "atom_robot" / "ar5"
                                               / "joint_calibration.json").read_text())["centre_joints"], float))
         print("已回 0 位")
     finally:

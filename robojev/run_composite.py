@@ -35,7 +35,7 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "数据_硬件" / "SO101"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "算法" / "DexGraspVLA-" / "SO101"))
 
 from . import actions as A                                            # noqa: E402
 from . import rec                                                      # noqa: E402
@@ -741,7 +741,7 @@ def main() -> int:
         if a.locate == "top":
             # 先回 0 位让臂离开俯视画面：上次失败时臂停在物体上方，俯视里物体被挡住就找不到
             import json as _json
-            centre = np.asarray(_json.loads((Path(__file__).resolve().parents[4] / "数据_硬件" / "SO101" / "atom_robot" / "ar5"
+            centre = np.asarray(_json.loads((Path(__file__).resolve().parents[4] / "算法" / "DexGraspVLA-" / "SO101" / "atom_robot" / "ar5"
                                              / "joint_calibration.json").read_text())["centre_joints"], float)
             slow_goto(env, centre)
             if a.calib_gripper:
@@ -760,7 +760,7 @@ def main() -> int:
             import json as _json
             from .calibrate_top import path_min_z
             from .top335 import approach as approach335
-            centre = np.asarray(_json.loads((Path(__file__).resolve().parents[4] / "数据_硬件" / "SO101" / "atom_robot" / "ar5"
+            centre = np.asarray(_json.loads((Path(__file__).resolve().parents[4] / "算法" / "DexGraspVLA-" / "SO101" / "atom_robot" / "ar5"
                                              / "joint_calibration.json").read_text())["centre_joints"], float)
             slow_goto(env, centre)
             if a.calib_gripper:
@@ -781,7 +781,7 @@ def main() -> int:
         elif a.locate == "wrist":
             import json as _json
             from .top_servo import goto_start
-            centre = np.asarray(_json.loads((Path(__file__).resolve().parents[4] / "数据_硬件" / "SO101" / "atom_robot" / "ar5"
+            centre = np.asarray(_json.loads((Path(__file__).resolve().parents[4] / "算法" / "DexGraspVLA-" / "SO101" / "atom_robot" / "ar5"
                                              / "joint_calibration.json").read_text())["centre_joints"], float)
             slow_goto(env, centre)
             goto_start(env, slow_goto)

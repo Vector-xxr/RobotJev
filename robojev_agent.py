@@ -47,7 +47,7 @@ TEMPLATES = {
                           "cmd": "PYTHONPATH= python -m robojev.click_grasp_web --link {infer_dir}"},
     "robojev_click_dry": {"cwd": "robojev",
                           "cmd": "PYTHONPATH= python -m robojev.click_grasp_web --link {infer_dir} --dry"},
-    # 恢复机械臂：和 collect 启动时那套一样（diagnose → 上电 → 回 0 位）。在 数据_硬件/SO101 下跑
+    # 恢复机械臂：和 collect 启动时那套一样（diagnose → 上电 → 回 0 位）。在 算法/DexGraspVLA-/SO101 下跑
     "unseize":           {"cwd": "workdir", "cmd": "PYTHONPATH= python -m atom_robot.ar5.unseize"},
     "unseize_recover":   {"cwd": "workdir", "cmd": "PYTHONPATH= python -m atom_robot.ar5.unseize --recover --home"},
 }
@@ -79,7 +79,7 @@ def find_conda_hook():
 
 
 def pick_workdir(asked):
-    """网页带来的工作目录（atom_robot 所在，数据_硬件/SO101）优先；没给或不存在就用启动时的。"""
+    """网页带来的工作目录（atom_robot 所在，算法/DexGraspVLA-/SO101）优先；没给或不存在就用启动时的。"""
     fallback = os.path.expanduser(CFG["workdir"])
     asked = os.path.expanduser(str(asked or "").strip())
     if asked and os.path.isdir(asked):
@@ -356,7 +356,7 @@ def main():
     p.add_argument("--token", required=True, help="和网站上 RobotJev 代理的令牌一致")
     p.add_argument("--site", default="http://192.168.5.100:8090", help="网站地址（只用来放行它的请求）")
     p.add_argument("--port", type=int, default=8766, help="本机监听端口；抓取代理是 8765，别撞")
-    p.add_argument("--workdir", default=os.path.join(_workspace(), "数据_硬件", "SO101"),
+    p.add_argument("--workdir", default=os.path.join(_workspace(), "算法", "DexGraspVLA-", "SO101"),
                    help="恢复机械臂在这里跑（python -m atom_robot.ar5.unseize）；网页给了以网页为准")
     p.add_argument("--robojev-dir", default=os.path.dirname(os.path.abspath(__file__)),   # 本文件就在仓库根目录
                    help="RobotJev 仓库目录（python -m robojev.click_grasp_web 在这里跑）")

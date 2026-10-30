@@ -30,7 +30,7 @@ from typing import Optional
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "数据_硬件" / "SO101"))       # 让 atom_robot 可导入
+sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "算法" / "DexGraspVLA-" / "SO101"))       # 让 atom_robot 可导入
 
 from . import actions as A                                          # noqa: E402
 from .camera import OrbbecRGBD                                      # noqa: E402

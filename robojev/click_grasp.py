@@ -31,9 +31,9 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "数据_硬件" / "SO101"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "算法" / "DexGraspVLA-" / "SO101"))
 
-ROOT = Path(__file__).resolve().parents[4] / "数据_硬件" / "SO101"
+ROOT = Path(__file__).resolve().parents[4] / "算法" / "DexGraspVLA-" / "SO101"
 CALIB = Path(__file__).resolve().parent / "calibration"
 WIN = "click to grasp"
 SCALE = 1.5                      # 窗口放大倍数（640x480 太小，点不准）

@@ -4,7 +4,7 @@
 
 > [!NOTE]
 > **放在 GitHub 上要知道的**：这个仓库原本是一个更大工作区里的项目（`<工作区>/算法/Jev/RobotJev/`）。
-> - 连真机要用仓库外的 `atom_robot`（AR5 臂驱动、夹爪驱动，在原工作区 `数据_硬件/SO101/`，没有公开）和珞石 SDK。`robojev` 包按固定层数找它（从 `robojev/` 往上 4 层就是工作区根，再找 `数据_硬件/SO101`），所以本仓库要放在 `<工作区>/算法/Jev/RobotJev/`；只有网页代理 `robojev_agent.py` 认环境变量 `YUHANG_WS`。
+> - 连真机要用仓库外的 `atom_robot`（AR5 臂驱动、夹爪驱动，在原工作区 `算法/DexGraspVLA-/SO101/`，没有公开）和珞石 SDK。`robojev` 包按固定层数找它（从 `robojev/` 往上 4 层就是工作区根，再找 `算法/DexGraspVLA-/SO101`），所以本仓库要放在 `<工作区>/算法/Jev/RobotJev/`；只有网页代理 `robojev_agent.py` 认环境变量 `YUHANG_WS`。
 > - 模型（`weights/laya/`、`weights/clip/`、`PlayJev/weights/`、根目录的 `*.pt`）不在仓库里，来源见 [SETUP_5070Ti.md](SETUP_5070Ti.md) 和 [PlayJev/SETUP_5070Ti.md](PlayJev/SETUP_5070Ti.md)。
 > - 根目录的上游代码是 [NandhaKishorM/laya](https://github.com/NandhaKishorM/laya)，`PlayJev/` 是 [OmniJev/PlayJev](https://github.com/OmniJev/PlayJev)，都是 Apache-2.0（[LICENSE](LICENSE)、[PlayJev/LICENSE](PlayJev/LICENSE)），出处见 [上游来源.md](上游来源.md)。
 > - 文中指向 `../../../工作区说明.md`、`../RobotDecision` 等的链接是原工作区里的其他项目，在这里打不开（RobotDecision 也已公开：[Vector-xxr/RobotDecision](https://github.com/Vector-xxr/RobotDecision)）。
@@ -26,7 +26,7 @@
 |---|---|---|
 | `laya/` 等根目录上游文件 | 上游 Laya（文本决策模型），说明见 [README_laya.md](README_laya.md) | 以 editable 方式装进 `laya` 环境。robojev 只有旧实验用它（`policy.py`，经 `bench_policy`、`run_loop`），抓取流程不用 |
 | `PlayJev/` | 上游 PlayJev（吃一帧画面、出动作分布），说明见 [PlayJev/README.md](PlayJev/README.md) | 在 `playjev` 环境里起服务，监听 `127.0.0.1:18732`；robojev 通过 `probe_playjev.ask` 调用 |
-| `robojev/`、`robojev_agent.py` | 自己的抓取流程和网页代理 | 跑在 `laya` 环境，经 `数据_硬件/SO101/atom_robot` 驱动 AR5 和夹爪 |
+| `robojev/`、`robojev_agent.py` | 自己的抓取流程和网页代理 | 跑在 `laya` 环境，经 `算法/DexGraspVLA-/SO101/atom_robot` 驱动 AR5 和夹爪 |
 
 上游代码从哪来、改过什么，见 [上游来源.md](上游来源.md) 和 [PlayJev/上游来源.md](PlayJev/上游来源.md)。
 

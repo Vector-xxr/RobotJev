@@ -98,7 +98,7 @@ def reset_orbbec(wait_s: float = 8.0, serial: str | None = WRIST_SERIAL) -> bool
     import sys
     from pathlib import Path
 
-    root = Path(__file__).resolve().parents[4] / "数据_硬件" / "SO101"          # .../数据_硬件/SO101（atom_robot 所在）
+    root = Path(__file__).resolve().parents[4] / "算法" / "DexGraspVLA-" / "SO101"          # .../算法/DexGraspVLA-/SO101（atom_robot 所在）
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
     port = find_orbbec_port(serial)

@@ -25,7 +25,7 @@ import time
 from pathlib import Path
 
 OUT = Path(__file__).resolve().parent / "calibration" / "orbbec_params.json"
-PROJECT = Path(__file__).resolve().parents[4] / "数据_硬件" / "SO101"
+PROJECT = Path(__file__).resolve().parents[4] / "算法" / "DexGraspVLA-" / "SO101"
 W, H, FPS = 640, 480, 30
 
 
